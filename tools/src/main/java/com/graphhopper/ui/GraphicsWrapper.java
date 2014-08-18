@@ -71,7 +71,15 @@ public class GraphicsWrapper
 
     public void plotText( Graphics2D g2, double lat, double lon, String text )
     {
-        g2.drawString(text, (int) getX(lon) + 5, (int) getY(lat) + 5);
+    	int width=g2.getFontMetrics().charsWidth(text.toCharArray(), 0, text.length());
+    	int x=(int)getX(lon);
+    	int y=(int)getY(lat);
+    	
+    	g2.setColor(Color.LIGHT_GRAY);
+    	g2.fillRect(x,y-10, width+10, 20);
+    	g2.setColor(Color.BLACK);
+    	g2.drawRect(x,y-10, width+10, 20);
+        g2.drawString(text, x+ 5,y + 5);
     }
 
     public void plotEdge( Graphics2D g2, double lat, double lon, double lat2, double lon2, int width )

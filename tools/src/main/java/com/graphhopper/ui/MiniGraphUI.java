@@ -49,7 +49,7 @@ import org.slf4j.LoggerFactory;
  * <p/>
  * @author Peter Karich
  */
-public class MiniGraphUI
+public class MiniGraphUI extends BaseGraphUI
 {
     public static void main( String[] strs ) throws Exception
     {
@@ -61,23 +61,25 @@ public class MiniGraphUI
     private Logger logger = LoggerFactory.getLogger(getClass());
     private Path path;
     private AlgorithmPreparation prepare;
-    private final Graph graph;
-    private final NodeAccess na;
+   
+    
     private LocationIndexTree index;
     private String latLon = "";
-    private GraphicsWrapper mg;
+    
     private JPanel infoPanel;
     private LayeredPanel mainPanel;
     private MapLayer roadsLayer;
     private final MapLayer pathLayer;
-    private boolean fastPaint = false;
+  
     private final Weighting weighting;
     private final FlagEncoder encoder;
-
+    protected boolean fastPaint = false;
+    
+   
     public MiniGraphUI( GraphHopper hopper, boolean debug )
     {
-        this.graph = hopper.getGraph();
-        this.na = graph.getNodeAccess();
+    	super(hopper.getGraph());
+        
         prepare = hopper.getPreparation();
         encoder = hopper.getEncodingManager().getSingle();
         weighting = hopper.createWeighting("fastest", encoder); //new PriorityWeighting(encoder);
@@ -85,7 +87,7 @@ public class MiniGraphUI
             prepare = NoOpAlgorithmPreparation.createAlgoPrepare(graph, "dijkstrabi", encoder, weighting, TraversalMode.NODE_BASED);
 
         logger.info("locations:" + graph.getNodes() + ", debug:" + debug + ", algo:" + prepare.createAlgo().getName());
-        mg = new GraphicsWrapper(graph);
+      
 
         // prepare node quadtree to 'enter' the graph. create a 313*313 grid => <3km
 //         this.index = new DebugLocation2IDQuadtree(roadGraph, mg);
@@ -101,7 +103,7 @@ public class MiniGraphUI
             @Override
             protected void paintComponent( Graphics g )
             {
-                g.setColor(Color.WHITE);
+                g.setColor(Color.LIGHT_GRAY);
                 Rectangle b = infoPanel.getBounds();
                 g.fillRect(0, 0, b.width, b.height);
 
@@ -129,11 +131,7 @@ public class MiniGraphUI
                 int locs = graph.getNodes();
                 Rectangle d = getBounds();
                 BBox b = mg.setBounds(0, d.width, 0, d.height);
-                if (fastPaint)
-                {
-                    rand.setSeed(0);
-                    bitset.clear();
-                }
+                
 
 //                g2.setColor(Color.BLUE);
 //                double fromLat = 42.56819, fromLon = 1.603231;
@@ -149,40 +147,9 @@ public class MiniGraphUI
 //                plotPath(path, g2, 1);
                 g2.setColor(Color.black);
 
-                EdgeExplorer explorer = graph.createEdgeExplorer(EdgeFilter.ALL_EDGES);
-                for (int nodeIndex = 0; nodeIndex < locs; nodeIndex++)
-                {
-                    if (fastPaint && rand.nextInt(30) > 1)
-                        continue;
-                    double lat = na.getLatitude(nodeIndex);
-                    double lon = na.getLongitude(nodeIndex);
-
-                    // mg.plotText(g2, lat, lon, "" + nodeIndex);
-                    if (lat < b.minLat || lat > b.maxLat || lon < b.minLon || lon > b.maxLon)
-                        continue;
-
-                    EdgeIterator iter = explorer.setBaseNode(nodeIndex);
-                    while (iter.next())
-                    {
-                        int nodeId = iter.getAdjNode();
-                        int sum = nodeIndex + nodeId;
-                        if (fastPaint)
-                        {
-                            if (bitset.contains(sum))
-                                continue;
-
-                            bitset.add(sum);
-                        }
-                        double lat2 = na.getLatitude(nodeId);
-                        double lon2 = na.getLongitude(nodeId);
-
-                        // mg.plotText(g2, lat * 0.9 + lat2 * 0.1, lon * 0.9 + lon2 * 0.1, iter.getName());
-                        //mg.plotText(g2, lat * 0.9 + lat2 * 0.1, lon * 0.9 + lon2 * 0.1, "s:" + (int) encoder.getSpeed(iter.getFlags()));
-                        //g2.setColor(Color.BLACK);                        
-                        mg.plotEdge(g2, lat, lon, lat2, lon2);
-                        g2.setColor(Color.BLACK);
-                    }
-                }
+                
+                paintGraph(  bitset, b, g2,fastPaint);
+               
             }
         });
 
