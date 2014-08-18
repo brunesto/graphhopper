@@ -122,7 +122,7 @@ public class TurnCostStorage implements ExtendedStorage
         return true;
     }
 
-    private int getCostTableAdress( int index )
+    protected int getCostTableAdress( int index )
     {
         if (index >= graph.getNodes() || index < 0)
             return NO_COST_ENTRY;

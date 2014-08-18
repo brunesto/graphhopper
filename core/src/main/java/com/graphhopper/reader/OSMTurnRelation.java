@@ -87,7 +87,8 @@ public class OSMTurnRelation
         {
             if (viaNodeId == OSMReader.EMPTY)
             {
-                throw new IllegalArgumentException("Unknown node osm id");
+               //throw new IllegalArgumentException("Unknown node osm id");
+            	return entries;
             }
 
             int edgeIdFrom = EdgeIterator.NO_EDGE;

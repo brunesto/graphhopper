@@ -40,6 +40,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+import javax.xml.ws.RespectBinding;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -653,6 +655,17 @@ public class GraphHopper implements GraphHopperAPI
                 setEncodingManager(encodingManager).
                 setWayPointMaxDistance(wayPointMaxDistance);
     }
+    
+    
+    protected void instanciateGraph(  GHDirectory dir ){
+    	 if (chEnabled)
+             graph = new LevelGraphStorage(dir, encodingManager, hasElevation());
+         else if (turnCosts)
+             graph = new GraphHopperStorage(dir, encodingManager, hasElevation(), new TurnCostStorage());
+         else
+             graph = new GraphHopperStorage(dir, encodingManager, hasElevation());
+    }
+    
 
     /**
      * Opens existing graph.
@@ -698,12 +711,7 @@ public class GraphHopper implements GraphHopperAPI
 
         GHDirectory dir = new GHDirectory(ghLocation, dataAccessType);
 
-        if (chEnabled)
-            graph = new LevelGraphStorage(dir, encodingManager, hasElevation());
-        else if (turnCosts)
-            graph = new GraphHopperStorage(dir, encodingManager, hasElevation(), new TurnCostStorage());
-        else
-            graph = new GraphHopperStorage(dir, encodingManager, hasElevation());
+        instanciateGraph(dir);
 
         graph.setSegmentSize(defaultSegmentSize);
 
@@ -862,31 +870,8 @@ public class GraphHopper implements GraphHopperAPI
             }
 
             sw = new StopWatch().start();
-            String algoStr = request.getAlgorithm().isEmpty() ? "dijkstrabi" : request.getAlgorithm();
-            RoutingAlgorithm algo = null;
-            if (chEnabled)
-            {
-                if (prepare == null)
-                    throw new IllegalStateException("Preparation object is null. CH-preparation wasn't done or did you "
-                            + "forgot to call disableCHShortcuts()?");
-
-                if (algoStr.equals("dijkstrabi"))
-                    algo = prepare.createAlgo();
-                else if (algoStr.equals("astarbi"))
-                    algo = ((PrepareContractionHierarchies) prepare).createAStar();
-                else
-                {
-                    rsp.addError(new IllegalStateException(
-                            "Only dijkstrabi and astarbi is supported for LevelGraph (using contraction hierarchies)!"));
-                    break;
-                }
-            } else
-            {
-                Weighting weighting = createWeighting(request.getWeighting(), encoder);
-                prepare = NoOpAlgorithmPreparation.createAlgoPrepare(graph, algoStr, encoder, weighting);
-                algo = prepare.createAlgo();
-            }
-
+            RoutingAlgorithm algo=instanciateAlgo(request,rsp,encoder);
+         
             debug += ", algoInit:" + sw.stop().getSeconds() + "s";
             sw = new StopWatch().start();
 
@@ -909,7 +894,35 @@ public class GraphHopper implements GraphHopperAPI
         return paths;
     }
 
-    protected LocationIndex createLocationIndex( Directory dir )
+    protected RoutingAlgorithm instanciateAlgo( GHRequest request, GHResponse rsp,FlagEncoder encoder ) {
+    	   String algoStr = request.getAlgorithm().isEmpty() ? "dijkstrabi" : request.getAlgorithm();
+           RoutingAlgorithm algo = null;
+           if (chEnabled)
+           {
+               if (prepare == null)
+                   throw new IllegalStateException("Preparation object is null. CH-preparation wasn't done or did you "
+                           + "forgot to call disableCHShortcuts()?");
+
+               if (algoStr.equals("dijkstrabi"))
+                   algo = prepare.createAlgo();
+               else if (algoStr.equals("astarbi"))
+                   algo = ((PrepareContractionHierarchies) prepare).createAStar();
+               else
+               {
+                   rsp.addError(new IllegalStateException(
+                           "Only dijkstrabi and astarbi is supported for LevelGraph (using contraction hierarchies)!"));
+               }
+           } else
+           {
+               Weighting weighting = createWeighting(request.getWeighting(), encoder);
+               prepare = NoOpAlgorithmPreparation.createAlgoPrepare(graph, algoStr, encoder, weighting);
+               algo = prepare.createAlgo();
+           }
+           return algo;
+
+    }
+
+	protected LocationIndex createLocationIndex( Directory dir )
     {
         LocationIndex tmpIndex;
         if (graph instanceof LevelGraph)
