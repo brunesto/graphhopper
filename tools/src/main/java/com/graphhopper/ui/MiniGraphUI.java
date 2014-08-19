@@ -30,13 +30,19 @@ import com.graphhopper.storage.index.QueryResult;
 import com.graphhopper.util.*;
 import com.graphhopper.util.shapes.BBox;
 import com.graphhopper.util.shapes.GHPoint;
+
 import gnu.trove.iterator.TIntIterator;
 import gnu.trove.list.TIntList;
 import gnu.trove.set.hash.TIntHashSet;
+
 import java.awt.*;
 import java.awt.event.*;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.Random;
+
 import javax.swing.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,6 +86,17 @@ public class MiniGraphUI extends BaseGraphUI
     {
     	super(hopper.getGraph());
         
+    	
+//    	addObserver(new Observer() {
+//			
+//			@Override
+//			public void update(Observable o, Object arg) {
+//				logger.info("update!!!");
+//				repaintRoads();
+//				
+//			}
+//		});
+		
         prepare = hopper.getPreparation();
         encoder = hopper.getEncodingManager().getSingle();
         weighting = hopper.createWeighting("fastest", encoder); //new PriorityWeighting(encoder);
@@ -109,10 +126,10 @@ public class MiniGraphUI extends BaseGraphUI
 
                 g.setColor(Color.BLUE);
                 g.drawString(latLon, 40, 20);
-                g.drawString("scale:" + mg.getScaleX(), 40, 40);
-                int w = mainPanel.getBounds().width;
-                int h = mainPanel.getBounds().height;
-                g.drawString(mg.setBounds(0, w, 0, h).toLessPrecisionString(), 40, 60);
+                g.drawString(mg.info(), 40, 40);
+//                int w = mainPanel.getBounds().width;
+//                int h = mainPanel.getBounds().height;
+//                g.drawString(mg.setBounds(0, w, 0, h).toLessPrecisionString(), 40, 60);
             }
         };
 
@@ -122,15 +139,18 @@ public class MiniGraphUI extends BaseGraphUI
         final GHBitSet bitset = new GHTBitSet(graph.getNodes());
         mainPanel.addLayer(roadsLayer = new DefaultMapLayer()
         {
-            Random rand = new Random();
-
+           
             @Override
             public void paintComponent( Graphics2D g2 )
             {
                 clearGraphics(g2);
-                int locs = graph.getNodes();
-                Rectangle d = getBounds();
-                BBox b = mg.setBounds(0, d.width, 0, d.height);
+                //int locs = graph.getNodes();
+//                BBox graphBounds=graph.getBounds();
+//                Rectangle d = getBounds();
+//                mg.setViewPort(d.width,d.height);
+//                mg.center((graphBounds.maxLat+graphBounds.minLat)/2, (graphBounds.maxLon+graphBounds.minLon)/2);
+//                
+                BBox b = mg.getBounds();
                 
 
 //                g2.setColor(Color.BLUE);
@@ -209,6 +229,16 @@ public class MiniGraphUI extends BaseGraphUI
             repaintManager.setDoubleBufferingEnabled(false);
             mainPanel.setBuffering(false);
         }
+        
+        mainPanel.addComponentListener(new ComponentAdapter() {
+		
+			
+			@Override
+			public void componentResized(ComponentEvent e) {
+				resize(roadsLayer.getBounds().width,roadsLayer.getBounds().height);
+			}
+		});
+        
     }
 
     // for debugging
@@ -289,6 +319,7 @@ public class MiniGraphUI extends BaseGraphUI
                     frame.add(infoPanel, BorderLayout.NORTH);
 
                     infoPanel.setPreferredSize(new Dimension(300, 100));
+                    
 
                     // scale
                     mainPanel.addMouseWheelListener(new MouseWheelListener()
@@ -445,6 +476,7 @@ public class MiniGraphUI extends BaseGraphUI
         pathLayer.repaint();
         roadsLayer.repaint();
         mainPanel.repaint();
+        infoPanel.repaint();
         logger.info("roads painting took " + sw.stop().getSeconds() + " sec");
     }
 }
