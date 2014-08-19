@@ -21,7 +21,7 @@ protected Graph graph;
 protected  NodeAccess na;
 protected ZoomLevelGraphicsWrapper mg;
 Random rand;
-HeadlessTilesLayer mapsforgeLayer;
+MapsforgeLayer mapsforgeLayer;
 
 	 public BaseGraphUI(Graph graph){
 		 this.graph=graph;
@@ -35,8 +35,8 @@ HeadlessTilesLayer mapsforgeLayer;
 		 // mg.center((graphBounds.maxLat+graphBounds.minLat)/2, (graphBounds.maxLon+graphBounds.minLon)/2);
 	        
 		  rand = new Random();
-		  //mapsforgeLayer=new MapsforgeLayer("/home/bc/Downloads/czech_republic.map");
-		  mapsforgeLayer=new HeadlessTilesLayer("http://a.tile.openstreetmap.org", "/tmp/tiles");
+		  mapsforgeLayer=new MapsforgeLayer("/home/bc/Downloads/czech_republic.map");
+//		  mapsforgeLayer=new HeadlessTilesLayer("http://a.tile.openstreetmap.org", "/tmp/tiles");
 		  
 	 }
 	 
@@ -45,7 +45,7 @@ HeadlessTilesLayer mapsforgeLayer;
 //	 }
 	 
 	 public void resize(int width,int height){
-		// mapsforgeLayer.setViewportSize(width, height);
+		 mapsforgeLayer.setViewportSize(width, height);
 		 mg.setViewPort(width, height);
 	 }
 	 
@@ -61,7 +61,8 @@ HeadlessTilesLayer mapsforgeLayer;
 	 public void phase0( Graphics2D g2,BBox b) throws InterruptedException{
 		 double centerLat=(b.minLat+b.maxLat)/2;
 		 double centerLon=(b.minLon+b.maxLon)/2;
-		 mapsforgeLayer.paint(g2,mg,2000);
+		// mapsforgeLayer.paint(g2,mg,2000);
+		 mapsforgeLayer.paint(g2, centerLat, centerLon,(byte) mg.getZoomLevel());
 	 }
 	 public void phase1(GHBitSet bitset,BBox b, Graphics2D g2,boolean fastPaint){
 		 int locs=graph.getNodes();
