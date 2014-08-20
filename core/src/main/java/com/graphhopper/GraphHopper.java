@@ -711,13 +711,7 @@ public class GraphHopper implements GraphHopperAPI
             encodingManager = EncodingManager.create(ghLocation);
 
         GHDirectory dir = new GHDirectory(ghLocation, dataAccessType);
-        if (chEnabled)
-            graph = new LevelGraphStorage(dir, encodingManager, hasElevation());
-        else if (encodingManager.needsTurnCostsSupport())
-            graph = new GraphHopperStorage(dir, encodingManager, hasElevation(), new TurnCostStorage());
-        else
-            graph = new GraphHopperStorage(dir, encodingManager, hasElevation());
-
+        instanciateGraph(dir);
         graph.setSegmentSize(defaultSegmentSize);
 
         Lock lock = null;
@@ -746,7 +740,18 @@ public class GraphHopper implements GraphHopperAPI
         }
     }
 
-    /**
+    protected void instanciateGraph(GHDirectory dir) {
+        if (chEnabled)
+            graph = new LevelGraphStorage(dir, encodingManager, hasElevation());
+        else if (encodingManager.needsTurnCostsSupport())
+            graph = new GraphHopperStorage(dir, encodingManager, hasElevation(), new TurnCostStorage());
+        else
+            graph = new GraphHopperStorage(dir, encodingManager, hasElevation());
+
+	    
+    }
+
+	/**
      * Sets EncodingManager, does the preparation and creates the locationIndex
      */
     protected void postProcessing()
