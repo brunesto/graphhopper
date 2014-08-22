@@ -17,21 +17,37 @@
  */
 package com.graphhopper.routing.ch;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.util.Collection;
+import java.util.Iterator;
+
+import org.junit.Test;
+
 import com.graphhopper.routing.Dijkstra;
-import com.graphhopper.routing.DijkstraOneToMany;
+import com.graphhopper.routing.DijkstraOneToManyRef;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.RoutingAlgorithm;
 import com.graphhopper.routing.ch.PrepareContractionHierarchies.Shortcut;
-import com.graphhopper.routing.util.*;
+import com.graphhopper.routing.util.CarFlagEncoder;
+import com.graphhopper.routing.util.EncodingManager;
+import com.graphhopper.routing.util.FastestWeighting;
+import com.graphhopper.routing.util.FlagEncoder;
+import com.graphhopper.routing.util.ShortestWeighting;
+import com.graphhopper.routing.util.TraversalMode;
+import com.graphhopper.routing.util.Weighting;
 import com.graphhopper.storage.Graph;
+import com.graphhopper.storage.GraphBuilder;
 import com.graphhopper.storage.LevelGraph;
 import com.graphhopper.storage.LevelGraphStorage;
-import com.graphhopper.storage.GraphBuilder;
-import com.graphhopper.util.*;
-import java.util.Collection;
-import java.util.Iterator;
-import static org.junit.Assert.*;
-import org.junit.Test;
+import com.graphhopper.util.BitUtil;
+import com.graphhopper.util.EdgeIterator;
+import com.graphhopper.util.EdgeIteratorState;
+import com.graphhopper.util.EdgeSkipIterState;
+import com.graphhopper.util.GHUtility;
+import com.graphhopper.util.Helper;
 
 /**
  * @author Peter Karich
@@ -73,7 +89,7 @@ public class PrepareContractionHierarchiesTest
     {
         LevelGraph g = createExampleGraph();
         double normalDist = new Dijkstra(g, carEncoder, weighting, tMode).calcPath(4, 2).getDistance();
-        DijkstraOneToMany algo = new DijkstraOneToMany(g, carEncoder, weighting, tMode);
+        DijkstraOneToManyRef algo = new DijkstraOneToManyRef(g, carEncoder, weighting, tMode);
         algo.setEdgeFilter(new PrepareContractionHierarchies.IgnoreNodeFilter(g).setAvoidNode(3));
         int nodeEntry = algo.setLimitWeight(100).findEndNode(4, 2);
         assertTrue(algo.getWeight(nodeEntry) > normalDist);
@@ -89,7 +105,7 @@ public class PrepareContractionHierarchiesTest
         LevelGraph g = createExampleGraph();
         double normalDist = new Dijkstra(g, carEncoder, weighting, tMode).calcPath(4, 2).getDistance();
         assertEquals(3, normalDist, 1e-5);
-        DijkstraOneToMany algo = new DijkstraOneToMany(g, carEncoder, weighting, tMode);
+        DijkstraOneToManyRef algo = new DijkstraOneToManyRef(g, carEncoder, weighting, tMode);
         algo.setEdgeFilter(new PrepareContractionHierarchies.IgnoreNodeFilter(g).setAvoidNode(3));
         int nodeEntry = algo.setLimitWeight(10).findEndNode(4, 2);
         assertEquals(4, algo.getWeight(nodeEntry), 1e-5);
@@ -102,7 +118,7 @@ public class PrepareContractionHierarchiesTest
     public void testShortestPathLimit()
     {
         LevelGraph g = createExampleGraph();
-        DijkstraOneToMany algo = new DijkstraOneToMany(g, carEncoder, weighting, tMode);
+        DijkstraOneToManyRef algo = new DijkstraOneToManyRef(g, carEncoder, weighting, tMode);
         algo.setEdgeFilter(new PrepareContractionHierarchies.IgnoreNodeFilter(g).setAvoidNode(0));
         int endNode = algo.setLimitWeight(2).findEndNode(4, 1);
         // did not reach endNode

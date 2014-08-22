@@ -38,11 +38,15 @@ import com.graphhopper.util.EdgeIterator;
  */
 public class Dijkstra extends AbstractRoutingAlgorithm
 {
+	protected static final int NOT_FOUND = -1;
+	
     private TIntObjectMap<EdgeEntry> fromMap;
     private PriorityQueue<EdgeEntry> fromHeap;
     private int visitedNodes;
     protected int to = -1;
     protected EdgeEntry currEdge;
+    double limitWeight=Double.MAX_VALUE;
+	int limitVisitedNodes=-1;
 
     public Dijkstra( Graph g, FlagEncoder encoder, Weighting weighting, TraversalMode tMode )
     {
@@ -56,30 +60,52 @@ public class Dijkstra extends AbstractRoutingAlgorithm
         fromMap = new TIntObjectHashMap<EdgeEntry>(size);
     }
 
+    public void setFrom(int from){
+    	 currEdge = createEdgeEntry(from, 0);
+         if (!traversalMode.isEdgeBased())
+         {
+             fromMap.put(from, currEdge);
+         }
+    }
     @Override
     public Path calcPath( int from, int to )
     {
         checkAlreadyRun();
-        this.to = to;
-        currEdge = createEdgeEntry(from, 0);
-        if (!traversalMode.isEdgeBased())
-        {
-            fromMap.put(from, currEdge);
-        }
-        return runAlgo();
+        setFrom(from);
+        return runAlgo(to);
     }
-
-    protected Path runAlgo()
+    
+    protected Path runAlgo(int to)
     {
+    	
+    	int node=findEndNode(to);
+    	if (node==NOT_FOUND)
+    		return createEmptyPath();
+    	else {
+    		if (node!=to)
+    			throw new IllegalStateException("seems we were routed not where we asked for to:"+to+" routed node:"+node);
+    		return extractPath();
+    	}
+    }
+   
+    public int findEndNode(int to) {
+	    
+    	
+    	
+    	 this.to = to;
+
+    	 if (currEdge==null)
+ 			return NOT_FOUND;
+     	
+   
         EdgeExplorer explorer = outEdgeExplorer;
         while (true)
         {
             visitedNodes++;
-            if (finished())
-                break;
+            
 
             int startNode = currEdge.adjNode;
-            System.err.println("startNode:"+startNode +" currEdge.weight:"+currEdge.weight);
+//            System.err.println("startNode:"+startNode +" currEdge.weight:"+currEdge.weight);
             EdgeIterator iter = explorer.setBaseNode(startNode);
             while (iter.next())
             {
@@ -90,7 +116,7 @@ public class Dijkstra extends AbstractRoutingAlgorithm
                 double tmpWeight = weighting.calcWeight(iter, false, currEdge.edge) + currEdge.weight;
                 if (Double.isInfinite(tmpWeight))
                     continue;
-                System.err.println("  adjNode:"+iter.getAdjNode()+" tmpWeight:"+tmpWeight);
+//                System.err.println("  adjNode:"+iter.getAdjNode()+" tmpWeight:"+tmpWeight);
                 EdgeEntry nEdge = fromMap.get(iterationKey);
                 if (nEdge == null)
                 {
@@ -113,27 +139,35 @@ public class Dijkstra extends AbstractRoutingAlgorithm
             }
             visited(currEdge);
 
-            if (fromHeap.isEmpty())
+            if (finished())
+                break;
+            
+            if (fromHeap.isEmpty() || (limitVisitedNodes!=-1 && visitedNodes >= limitVisitedNodes))
             {
             	currEdge=null;
-                return createEmptyPath();
+                return NOT_FOUND;
             }
+            
+           
 
             currEdge = fromHeap.poll();
             if (currEdge == null)
                 throw new AssertionError("Empty edge cannot happen");
         }
-        return extractPath();
+        if (currEdge == null || !finished())
+        	return NOT_FOUND;
+        return currEdge.adjNode;
     }
 
     protected void visited(EdgeEntry edgeEntry) {
+    	// placeholder
     }
 
 	
 	@Override
     protected boolean finished()
     {
-        return currEdge.adjNode == to;
+        return currEdge.weight>=limitWeight || currEdge.adjNode == to;
     }
 
     @Override
@@ -164,9 +198,28 @@ public class Dijkstra extends AbstractRoutingAlgorithm
 
 	public void clear() {
 		initCollections(1000);
+		limitWeight=Double.MAX_VALUE; // should this be reset?
 		to=-1;
 		visitedNodes=0;
+		limitVisitedNodes=-1;
 		currEdge=null;
 	    
     }
+
+	public void close() {
+		currEdge=null;
+		fromHeap=null;
+		fromMap=null;
+	    
+    }
+
+	public Dijkstra setLimitWeight(double limitWeight) {
+		this.limitWeight = limitWeight;
+		return this;
+	}
+
+	public Dijkstra setLimitVisitedNodes(int limitVisitedNodes) {
+		this.limitVisitedNodes = limitVisitedNodes;
+		return this;
+	}
 }

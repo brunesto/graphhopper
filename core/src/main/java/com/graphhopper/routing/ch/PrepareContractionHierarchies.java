@@ -67,7 +67,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
     private final DataAccess originalEdges;
     private final Map<Shortcut, Shortcut> shortcuts = new HashMap<Shortcut, Shortcut>();
     private IgnoreNodeFilter ignoreNodeFilter;
-    private DijkstraOneToMany algo;
+    private DijkstraOneToManyRef algo;
     private boolean removesHigher2LowerEdges = true;
     private long counter;
     private int newShortcuts;
@@ -730,7 +730,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
         //   but we need additional priorities array to keep old value which is necessary for update method
         sortedNodes = new GHTreeMapComposed();
         oldPriorities = new int[g.getNodes()];
-        algo = new DijkstraOneToMany(g, prepareFlagEncoder, prepareWeighting, traversalMode);
+        algo = new DijkstraOneToManyRef(g, prepareFlagEncoder, prepareWeighting, traversalMode);
         return this;
     }
 

@@ -39,15 +39,28 @@ public class DijkstraOneToManyRef extends Dijkstra {
     }
 	
 	@Override
-    protected void checkAlreadyRun()
+    public Path calcPath( int from, int to )
     {
+	 	int node=findEndNode(from,to);
+	 	return path2node(node);
+    }
+	
+	
+    protected Path path2node(int node)
+    {
+    	if (node==NOT_FOUND)
+    		return createEmptyPath();
+    	EdgeEntry edgeEntry=visited.get(node);
+		if (edgeEntry==null)
+			return createEmptyPath();
+		return extractPath(edgeEntry);
     }
 	
 	@Override
 	protected void visited(EdgeEntry edgeEntry) {
 		
     	if (!visited.containsKey(edgeEntry.adjNode)){
-    		System.err.println("visited:"+edgeEntry);
+//    		System.err.println("visited:"+edgeEntry);
     		visited.put(edgeEntry.adjNode, edgeEntry);
     	} else {
     		//ignore
@@ -56,24 +69,21 @@ public class DijkstraOneToManyRef extends Dijkstra {
     }
 	int from=-1;
 	
-	@Override
-    public Path calcPath( int from, int to ){
-		if (this.from==-1){
-			// first run
-			this.from=from;
-			return super.calcPath(from, to);
-		}
-		else if (this.from!=from)
-			throw new IllegalArgumentException(" this.from "+this.from+" from:"+from);
+	
+	 public int findEndNode(int from, int to) {
+		 if (this.from==-1){
+				setFrom(from);
+		 }
+		 else if (this.from!=from)
+	    	throw new IllegalArgumentException(" this.from "+this.from+" from:"+from);
 
-		this.to = to;
+		
 		EdgeEntry previouslyFound=visited.get(to);
 		if (previouslyFound!=null)
-			return extractPath(previouslyFound);
+			return to;
 		else {
-			if (currEdge==null)
-				return createEmptyPath();
-			return runAlgo();
+			
+			return super.findEndNode(to);
 		}
 	}
 
@@ -83,6 +93,39 @@ public class DijkstraOneToManyRef extends Dijkstra {
 	    from=-1;
 	    visited.clear();
 	    
+    }
+	
+	@Override
+    public void close(){
+		super.close();
+		visited=null;
+	}
+
+	public double getWeight(int endNode) {
+		EdgeEntry edgeEntry=visited.get(endNode);
+		if (edgeEntry==null)
+			return Double.MAX_VALUE;
+		else return edgeEntry.weight;
+    }
+	
+
+	@Override
+    public DijkstraOneToManyRef setLimitWeight(double limitWeight) {
+		super.setLimitWeight(limitWeight);
+		return this;
+	}
+		
+	@Override
+	public DijkstraOneToManyRef setLimitVisitedNodes(int i) {
+	    super.setLimitVisitedNodes(i);
+		return this;
+    }
+
+
+	
+
+	public String getMemoryUsageAsString() {
+	    return "TODO";
     }
 
 }
