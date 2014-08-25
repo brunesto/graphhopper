@@ -709,14 +709,18 @@ public class GraphHopper implements GraphHopperAPI
 
         if (encodingManager == null)
             encodingManager = EncodingManager.create(ghLocation);
-
+        ExtendedStorage  extendedStorage;
+        if (encodingManager.needsTurnCostsSupport())
+            extendedStorage=new TurnCostStorage();
+        else
+            extendedStorage=new ExtendedStorage.NoExtendedStorage();
+        
+        
         GHDirectory dir = new GHDirectory(ghLocation, dataAccessType);
         if (chEnabled)
-            graph = new LevelGraphStorage(dir, encodingManager, hasElevation());
-        else if (encodingManager.needsTurnCostsSupport())
-            graph = new GraphHopperStorage(dir, encodingManager, hasElevation(), new TurnCostStorage());
+            graph = new LevelGraphStorage(dir, encodingManager, hasElevation(), extendedStorage);
         else
-            graph = new GraphHopperStorage(dir, encodingManager, hasElevation());
+            graph = new GraphHopperStorage(dir, encodingManager, hasElevation(),extendedStorage);
 
         graph.setSegmentSize(defaultSegmentSize);
 

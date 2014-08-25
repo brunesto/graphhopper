@@ -49,8 +49,13 @@ public class LevelGraphStorage extends GraphHopperStorage implements LevelGraph
 
     public LevelGraphStorage( Directory dir, EncodingManager encodingManager, boolean enabled3D )
     {
-        super(dir, encodingManager, enabled3D);
+        this(dir, encodingManager, enabled3D,new ExtendedStorage.NoExtendedStorage()); 
     }
+    public LevelGraphStorage( Directory dir, EncodingManager encodingManager, boolean enabled3D,ExtendedStorage extendedStorage )
+    {
+        super(dir, encodingManager, enabled3D,extendedStorage);
+    }
+    
 
     @Override
     protected void initStorage()
@@ -129,7 +134,7 @@ public class LevelGraphStorage extends GraphHopperStorage implements LevelGraph
         return (EdgeSkipIterState) super.getEdgeProps(edgeId, endNode);
     }
 
-    class EdgeSkipIteratorImpl extends EdgeIterable implements EdgeSkipExplorer, EdgeSkipIterator
+    public class EdgeSkipIteratorImpl extends EdgeIterable implements EdgeSkipExplorer, EdgeSkipIterator
     {
         public EdgeSkipIteratorImpl( EdgeFilter filter )
         {
