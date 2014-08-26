@@ -490,6 +490,22 @@ public class GHUtility
         {
             throw new UnsupportedOperationException("Not supported. Edge is empty.");
         }
+
+		@Override
+        public int getFromOriginalEdge() {
+			 throw new UnsupportedOperationException("Not supported. Edge is empty.");
+        }
+
+		@Override
+        public int getToOriginalEdge() {
+			 throw new UnsupportedOperationException("Not supported. Edge is empty.");
+        }
+
+		@Override
+        public void setOriginalEdges(int edge1, int edge2) {
+			 throw new UnsupportedOperationException("Not supported. Edge is empty.");
+	        
+        }
     };
 
     /**

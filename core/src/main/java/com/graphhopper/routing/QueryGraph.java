@@ -536,7 +536,7 @@ public class QueryGraph implements Graph
         return new UnsupportedOperationException("QueryGraph cannot be modified.");
     }
 
-    static class VirtualEdgeIterator implements EdgeIterator, EdgeSkipIterState
+    public static class VirtualEdgeIterator implements EdgeIterator, EdgeSkipIterState
     {
 
         private final List<EdgeIteratorState> edges;
@@ -707,12 +707,28 @@ public class QueryGraph implements Graph
         {
             throw new UnsupportedOperationException("Not supported.");
         }
+
+		@Override
+        public int getFromOriginalEdge() {
+			  throw new UnsupportedOperationException("Not supported.");
+        }
+
+		@Override
+        public int getToOriginalEdge() {
+			  throw new UnsupportedOperationException("Not supported.");
+        }
+
+		@Override
+        public void setOriginalEdges(int edge1, int edge2) {
+			  throw new UnsupportedOperationException("Not supported.");
+	        
+        }
     }
 
     /**
      * Creates an edge state decoupled from a graph where nodes, pointList, etc are kept in memory.
      */
-    private static class VirtualEdgeIState implements EdgeIteratorState, EdgeSkipIterState
+    public static class VirtualEdgeIState implements EdgeIteratorState, EdgeSkipIterState
     {
 
         private final PointList pointList;
@@ -885,6 +901,22 @@ public class QueryGraph implements Graph
         public double getWeight()
         {
             throw new UnsupportedOperationException("Not supported.");
+        }
+
+		@Override
+        public int getFromOriginalEdge() {
+			  throw new UnsupportedOperationException("Not supported.");
+        }
+
+		@Override
+        public int getToOriginalEdge() {
+			  throw new UnsupportedOperationException("Not supported.");
+        }
+
+		@Override
+        public void setOriginalEdges(int edge1, int edge2) {
+			  throw new UnsupportedOperationException("Not supported.");
+	        
         }
     }
 }

@@ -22,14 +22,18 @@ import gnu.trove.map.hash.TIntObjectHashMap;
 
 import java.util.PriorityQueue;
 
+import com.graphhopper.routing.ch.PrepareContractionHierarchies;
 import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.util.Weighting;
 import com.graphhopper.storage.EdgeEntry;
 import com.graphhopper.storage.Graph;
+import com.graphhopper.storage.LevelGraphStorage;
 import com.graphhopper.util.EdgeExplorer;
 import com.graphhopper.util.EdgeIterator;
 import com.graphhopper.util.EdgeIteratorState;
+import com.graphhopper.util.EdgeSkipIterState;
+import com.graphhopper.util.EdgeSkipIterator;
 import com.graphhopper.util.GHUtility;
 
 /**
@@ -136,6 +140,7 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
     @Override
     public boolean fillEdgesFrom()
     {
+    	//System.err.println("\nfillEdgesFrom");
         if (openSetFrom.isEmpty())
             return false;
 
@@ -149,6 +154,7 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
     @Override
     public boolean fillEdgesTo()
     {
+    	//System.err.println("\nfillEdgesTo");
         if (openSetTo.isEmpty())
             return false;
         currTo = openSetTo.poll();
@@ -171,18 +177,48 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
         return currFrom.weight + currTo.weight >= bestPath.getWeight();
     }
 
+    
+    
+    
+    
+    
     void fillEdges( EdgeEntry currEdge, PriorityQueue<EdgeEntry> prioQueue,
             TIntObjectMap<EdgeEntry> shortestWeightMap, EdgeExplorer explorer, boolean reverse )
     {
         int currNode = currEdge.adjNode;
+        //System.err.println("currEdge:"+(currEdge.parent!=null?currEdge.parent.adjNode:"")+" --> "+currEdge.adjNode+" edgeId:"+currEdge.edge);
+        
+        
         EdgeIterator iter = explorer.setBaseNode(currNode);
+        
+        
+        int originalEnteringEdgeId=currEdge.edge==EdgeIterator.NO_EDGE?EdgeIterator.NO_EDGE:PrepareContractionHierarchies.getOriginal(graph.getEdgeProps(currEdge.edge, currEdge.adjNode), true);
+        
+        //System.err.println("originalEnteringEdgeId:"+originalEnteringEdgeId);
         while (iter.next())
         {
-            if (!accept(iter, currEdge.edge))
-                continue;
-
+        	//System.err.println("  adjNode:"+iter.getAdjNode());
+            if (!accept(iter, currEdge.edge)){
+            	//System.err.println("  rejected");
+            	continue;
+            }
+            int originalExitingEdgeId=PrepareContractionHierarchies.getOriginal(iter, true);
+            PrepareContractionHierarchies.getOriginal(iter, false);
+            
+            // this should be part of the filter
+            //System.err.println("originalExitingEdgeId:"+originalExitingEdgeId);
+            if (!traversalMode.hasUTurnSupport() && originalEnteringEdgeId==originalExitingEdgeId){
+            	//System.err.println("  u turn");
+            	continue;
+            }
+            
+            
             int iterationKey = traversalMode.createTraversalId(iter, reverse);
+            //System.err.println("iterationKey:"+iterationKey+" is for edgeId:"+iter.getEdge()+" "+iter.getBaseNode()+" --> "+iter.getAdjNode()+"reverse:"+reverse);
+            
+            
             double tmpWeight = weighting.calcWeight(iter, reverse, currEdge.edge) + currEdge.weight;
+            //System.err.println("  tmpWeight:"+tmpWeight);
             if (Double.isInfinite(tmpWeight))
                 continue;
 

@@ -59,11 +59,11 @@ public class TurnRestrictionTest {
     	FlagEncoder encoder=graph.getEncodingManager().getSingle();
     	
     	Weighting weighting=new TurnWeighting(new ShortestWeighting(), encoder, (TurnCostStorage)graph.getExtendedStorage());
-    	RoutingAlgorithm dijkstra=new DijkstraOneToManyRef(graph, encoder, weighting, tMode);
+    	RoutingAlgorithm dijkstra=new DijkstraBidirectionRef(graph, encoder, weighting, tMode);
     	
     	
     	Path path=dijkstra.calcPath(from, to);
-    	path=dijkstra.calcPath(from, to);
+    	//path=dijkstra.calcPath(from, to);
     	// show path
     	
     	logger.info("route from "+from+" to "+to+" tMode:"+tMode);

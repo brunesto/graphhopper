@@ -24,8 +24,11 @@ import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.routing.util.LevelEdgeFilter;
 import com.graphhopper.util.EdgeIterator;
 import com.graphhopper.util.EdgeSkipIterState;
+import com.graphhopper.util.EdgeSkipIterator;
 import com.graphhopper.util.GHUtility;
+
 import static org.junit.Assert.*;
+
 import org.junit.Test;
 
 /**
@@ -104,17 +107,50 @@ public class LevelGraphStorageTest extends GraphHopperStorageTest
         tmpIter.setDistance(40).setFlags(carEncoder.setAccess(0, true, true));
         assertEquals(EdgeIterator.NO_EDGE, tmpIter.getSkippedEdge1());
         assertEquals(EdgeIterator.NO_EDGE, tmpIter.getSkippedEdge2());
+        assertEquals(EdgeIterator.NO_EDGE, tmpIter.getFromOriginalEdge());
+        assertEquals(EdgeIterator.NO_EDGE, tmpIter.getToOriginalEdge());
 
-        g.shortcut(0, 4).setDistance(40).setFlags(carEncoder.setAccess(0, true, true));
+        EdgeSkipIterState edgeSkipIterState=g.shortcut(0, 4);
+        edgeSkipIterState.setOriginalEdges(1, 2);
+        edgeSkipIterState.setDistance(40).setFlags(carEncoder.setAccess(0, true, true));
         g.setLevel(0, 1);
         g.setLevel(4, 1);
 
-        EdgeIterator iter = g.createEdgeExplorer(new LevelEdgeFilter(g)).setBaseNode(0);
+        EdgeSkipIterator iter = g.createEdgeExplorer(new LevelEdgeFilter(g)).setBaseNode(0);
         assertEquals(1, GHUtility.count(iter));
         iter = g.createEdgeExplorer().setBaseNode(2);
         assertEquals(2, GHUtility.count(iter));
+        
+        
+        assertEquals(2, iter.getToOriginalEdge());
+        
     }
 
+    
+    @Test
+    public void testOriginalStorage()
+    {
+        LevelGraph g = createGraph();
+        g.edge(0, 1, 10, true);
+        g.edge(0, 2, 20, true);
+        g.edge(2, 3, 30, true);
+        EdgeSkipIterState tmpIter = g.shortcut(3, 4);
+        tmpIter.setDistance(40).setFlags(carEncoder.setAccess(0, true, true));
+        assertEquals(EdgeIterator.NO_EDGE, tmpIter.getSkippedEdge1());
+        assertEquals(EdgeIterator.NO_EDGE, tmpIter.getSkippedEdge2());
+        assertEquals(EdgeIterator.NO_EDGE, tmpIter.getFromOriginalEdge());
+        assertEquals(EdgeIterator.NO_EDGE, tmpIter.getToOriginalEdge());
+        tmpIter.setOriginalEdges(1, 2);
+        
+        EdgeSkipIterator iter = g.createEdgeExplorer(new LevelEdgeFilter(g)).setBaseNode(3);
+           
+        assertEquals(2, iter.getToOriginalEdge()); 
+        assertEquals(1, iter.getFromOriginalEdge());
+       
+        
+    }
+
+    
     @Test
     public void testDisconnectEdge()
     {

@@ -19,11 +19,6 @@ package com.graphhopper.routing.ch;
 
 import com.graphhopper.coll.GHTreeMapComposed;
 import com.graphhopper.routing.*;
-import com.graphhopper.routing.util.AbstractAlgoPreparation;
-import com.graphhopper.routing.util.DefaultEdgeFilter;
-import com.graphhopper.routing.util.LevelEdgeFilter;
-import com.graphhopper.routing.util.FlagEncoder;
-import com.graphhopper.routing.util.Weighting;
 import com.graphhopper.routing.util.*;
 import com.graphhopper.storage.DataAccess;
 import com.graphhopper.storage.DAType;
@@ -33,7 +28,9 @@ import com.graphhopper.storage.LevelGraph;
 import com.graphhopper.storage.LevelGraphStorage;
 import com.graphhopper.storage.NodeAccess;
 import com.graphhopper.util.*;
+
 import java.util.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -427,7 +424,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
         void foundShortcut( int u_fromNode, int w_toNode,
                 double existingDirectWeight, double distance,
                 EdgeIterator outgoingEdges,
-                int skippedEdge1, int incomingEdgeOrigCount );
+                int skippedEdge1, int incomingEdgeOrigCount,int originalEdge1,int originalEdge2 );
 
         int getNode();
     }
@@ -456,7 +453,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
         public void foundShortcut( int u_fromNode, int w_toNode,
                 double existingDirectWeight, double distance,
                 EdgeIterator outgoingEdges,
-                int skippedEdge1, int incomingEdgeOrigCount )
+                int skippedEdge1, int incomingEdgeOrigCount,int originalEdge1,int originalEdge2  )
         {
             shortcuts++;
             originalEdgesCount += incomingEdgeOrigCount + getOrigEdgeCount(outgoingEdges.getEdge());
@@ -488,7 +485,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
         public void foundShortcut( int u_fromNode, int w_toNode,
                 double existingDirectWeight, double existingDistSum,
                 EdgeIterator outgoingEdges,
-                int skippedEdge1, int incomingEdgeOrigCount )
+                int skippedEdge1, int incomingEdgeOrigCount,int originalEdge1,int originalEdge2 )
         {
             // FOUND shortcut 
             // but be sure that it is the only shortcut in the collection 
@@ -506,7 +503,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
             if (tmpRetSc != null)
             {
                 // overwrite flags only if skipped edges are identical
-                if (tmpRetSc.skippedEdge2 == skippedEdge1 && tmpRetSc.skippedEdge1 == outgoingEdges.getEdge())
+                if (tmpRetSc.skippedEdge2 == skippedEdge1 && tmpRetSc.skippedEdge1a == outgoingEdges.getEdge())
                 {
                     tmpRetSc.flags = PrepareEncoder.getScDirMask();
                     return;
@@ -514,9 +511,11 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
             }
 
             shortcuts.put(sc, sc);
-            sc.skippedEdge1 = skippedEdge1;
+            sc.skippedEdge1a = skippedEdge1;
             sc.skippedEdge2 = outgoingEdges.getEdge();
             sc.originalEdges = incomingEdgeOrigCount + getOrigEdgeCount(outgoingEdges.getEdge());
+            sc.originalEdge1=originalEdge1;
+            sc.originalEdge2=originalEdge2;
         }
     }
 
@@ -576,13 +575,18 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
         return 10 * edgeDifference + originalEdgesCount + contractedNeighbors;
     }
 
+    
+   
+    
+    
+    
     /**
      * Finds shortcuts, does not change the underlying graph.
      */
     void findShortcuts( ShortcutHandler sch )
     {
         long tmpDegreeCounter = 0;
-        EdgeIterator incomingEdges = vehicleInExplorer.setBaseNode(sch.getNode());
+        EdgeSkipIterator incomingEdges = vehicleInExplorer.setBaseNode(sch.getNode());
         // collect outgoing nodes (goal-nodes) only once
         while (incomingEdges.next())
         {
@@ -594,9 +598,10 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
             double v_u_dist = incomingEdges.getDistance();
             double v_u_weight = prepareWeighting.calcWeight(incomingEdges, true, EdgeIterator.NO_EDGE);
             int skippedEdge1 = incomingEdges.getEdge();
+          
             int incomingEdgeOrigCount = getOrigEdgeCount(skippedEdge1);
             // collect outgoing nodes (goal-nodes) only once
-            EdgeIterator outgoingEdges = vehicleOutExplorer.setBaseNode(sch.getNode());
+            EdgeSkipIterator outgoingEdges = vehicleOutExplorer.setBaseNode(sch.getNode());
             // force fresh maps etc as this cannot be determined by from node alone (e.g. same from node but different avoidNode)
             algo.clear();
             tmpDegreeCounter++;
@@ -633,10 +638,26 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
                     // FOUND witness path, so do not add shortcut                
                     continue;
 
+             
+                int incomingEdgeOriginal=getOriginal(incomingEdges,true);
+                int outgoingEdgeOriginal=getOriginal(outgoingEdges,false);
+                
+                
+                // swap?
+                boolean forwardEdge=u_fromNode<w_toNode;
+                if (!forwardEdge){
+                	int aux=incomingEdgeOriginal;
+                	incomingEdgeOriginal=outgoingEdgeOriginal;
+                	outgoingEdgeOriginal=aux;
+                			
+                }
+         	   
+                
+                
                 sch.foundShortcut(u_fromNode, w_toNode,
                         existingDirectWeight, existingDistSum,
                         outgoingEdges,
-                        skippedEdge1, incomingEdgeOrigCount);
+                        skippedEdge1, incomingEdgeOrigCount,incomingEdgeOriginal,outgoingEdgeOriginal);
             }
         }
         if (sch instanceof AddShortcutHandler)
@@ -669,13 +690,13 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
                     if (sc.weight >= prepareWeighting.calcWeight(iter, false, EdgeIterator.NO_EDGE))
                         continue NEXT_SC;
 
-                    if (iter.getEdge() == sc.skippedEdge1 || iter.getEdge() == sc.skippedEdge2)
+                    if (iter.getEdge() == sc.skippedEdge1a || iter.getEdge() == sc.skippedEdge2)
                     {
                         throw new IllegalStateException("Shortcut cannot update itself! " + iter.getEdge()
-                                + ", skipEdge1:" + sc.skippedEdge1 + ", skipEdge2:" + sc.skippedEdge2
+                                + ", skipEdge1:" + sc.skippedEdge1a + ", skipEdge2:" + sc.skippedEdge2
                                 + ", edge " + iter + ":" + getCoords(iter, g)
                                 + ", sc:" + sc
-                                + ", skippedEdge1: " + getCoords(g.getEdgeProps(sc.skippedEdge1, sc.from), g)
+                                + ", skippedEdge1: " + getCoords(g.getEdgeProps(sc.skippedEdge1a, sc.from), g)
                                 + ", skippedEdge2: " + getCoords(g.getEdgeProps(sc.skippedEdge2, sc.to), g)
                                 + ", neighbors:" + GHUtility.getNeighbors(iter));
                     }
@@ -684,7 +705,8 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
                     iter.setFlags(sc.flags);
                     iter.setWeight(sc.weight);
                     iter.setDistance(sc.dist);
-                    iter.setSkippedEdges(sc.skippedEdge1, sc.skippedEdge2);
+                    iter.setSkippedEdges(sc.skippedEdge1a, sc.skippedEdge2);
+                    iter.setOriginalEdges(sc.originalEdge1, sc.originalEdge2);
                     setOrigEdgeCount(iter.getEdge(), sc.originalEdges);
                     updatedInGraph = true;
                     break;
@@ -698,7 +720,8 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
                 edgeState.setFlags(sc.flags);
                 edgeState.setWeight(sc.weight);
                 edgeState.setDistance(sc.dist);
-                edgeState.setSkippedEdges(sc.skippedEdge1, sc.skippedEdge2);
+                edgeState.setSkippedEdges(sc.skippedEdge1a, sc.skippedEdge2);
+                edgeState.setOriginalEdges(sc.originalEdge1, sc.originalEdge2);
                 setOrigEdgeCount(edgeState.getEdge(), sc.originalEdges);
                 tmpNewShortcuts++;
             }
@@ -914,8 +937,10 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
     {
         int from;
         int to;
-        int skippedEdge1;
+        int skippedEdge1a;
         int skippedEdge2;
+        int originalEdge1;
+        int originalEdge2;
         double dist;
         double weight;
         int originalEdges;
@@ -961,7 +986,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
             else
                 str = from + "->";
 
-            return str + to + ", weight:" + weight + " (" + skippedEdge1 + "," + skippedEdge2 + ")";
+            return str + to + ", weight:" + weight + " (" + skippedEdge1a + "," + skippedEdge2 + ") originals:( "+ originalEdge1 + "," + originalEdge2 + ")";
         }
     }
 
@@ -969,5 +994,41 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
     public String toString()
     {
         return "PREPARE|CH|dijkstrabi";
+    }
+    
+    
+    public static int  getOriginal(EdgeIteratorState iter,boolean from){
+    	
+    	// why VirtualEdgeIterator implements EdgeSkipIterState ?
+    	if (iter instanceof QueryGraph.VirtualEdgeIterator || iter instanceof QueryGraph.VirtualEdgeIState){
+    		return iter.getEdge();
+    	} else if (iter instanceof EdgeSkipIterState){
+    		EdgeSkipIterState edge=(EdgeSkipIterState) iter;
+	    	
+	    	
+	 	    int incomingEdgeOriginalFrom=edge.getFromOriginalEdge();
+	 	   
+	        if (incomingEdgeOriginalFrom==EdgeIterator.NO_EDGE)
+	     	   return edge.getEdge();
+	        else {
+	     	   int incomingEdgeOriginalTo=edge.getFromOriginalEdge();
+	     	   boolean forwardEdge=(edge.getAdjNode()>edge.getBaseNode());
+	     	   
+	     	   if (from)
+		        	   if (forwardEdge)
+		        		   return incomingEdgeOriginalFrom;
+		        	   else
+		        		   return incomingEdgeOriginalTo;
+	     	   else // keep it easy for readers :P
+	     		   if (forwardEdge)
+	     			   return incomingEdgeOriginalTo;
+		        	   else
+		        		   return incomingEdgeOriginalFrom;
+	        
+	        }
+    	} else {
+    		// a normal edge
+    		return iter.getEdge();
+    	}
     }
 }
