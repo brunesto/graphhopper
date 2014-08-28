@@ -58,7 +58,7 @@ public class TurnRestrictionTest {
 //    	GraphStorage graph=createTestGraph(true);
     	FlagEncoder encoder=graph.getEncodingManager().getSingle();
     	
-    	Weighting weighting=new TurnWeighting(new ShortestWeighting(), encoder, (TurnCostStorage)graph.getExtendedStorage());
+    	Weighting weighting=new TurnWeighting(new ShortestWeighting(),graph, encoder, (TurnCostStorage)graph.getExtendedStorage());
     	RoutingAlgorithm dijkstra=new DijkstraBidirectionRef(graph, encoder, weighting, tMode);
     	
     	

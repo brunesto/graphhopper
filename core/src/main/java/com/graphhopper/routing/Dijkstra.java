@@ -22,6 +22,9 @@ import gnu.trove.map.hash.TIntObjectHashMap;
 
 import java.util.PriorityQueue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.util.Weighting;
@@ -38,6 +41,8 @@ import com.graphhopper.util.EdgeIterator;
  */
 public class Dijkstra extends AbstractRoutingAlgorithm
 {
+	private static final Logger logger = LoggerFactory.getLogger(Dijkstra.class);
+		
 	protected static final int NOT_FOUND = -1;
 	
     private TIntObjectMap<EdgeEntry> fromMap;
@@ -102,10 +107,10 @@ public class Dijkstra extends AbstractRoutingAlgorithm
         while (true)
         {
             visitedNodes++;
-            
+            if (logger.isDebugEnabled()) logger.debug("\n\n\n\n"+visitedNodes);
 
             int startNode = currEdge.adjNode;
-//            System.err.println("startNode:"+startNode +" currEdge.weight:"+currEdge.weight);
+            if (logger.isDebugEnabled()) logger.debug("startNode:"+startNode +" currEdge.weight:"+currEdge.weight);
             EdgeIterator iter = explorer.setBaseNode(startNode);
             while (iter.next())
             {
@@ -116,7 +121,7 @@ public class Dijkstra extends AbstractRoutingAlgorithm
                 double tmpWeight = weighting.calcWeight(iter, false, currEdge.edge) + currEdge.weight;
                 if (Double.isInfinite(tmpWeight))
                     continue;
-//                System.err.println("  adjNode:"+iter.getAdjNode()+" tmpWeight:"+tmpWeight);
+                if (logger.isDebugEnabled()) logger.debug("  adjNode:"+iter.getAdjNode()+" tmpWeight:"+tmpWeight);
                 EdgeEntry nEdge = fromMap.get(iterationKey);
                 if (nEdge == null)
                 {

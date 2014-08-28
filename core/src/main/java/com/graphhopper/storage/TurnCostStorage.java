@@ -36,15 +36,18 @@ public class TurnCostStorage implements ExtendedStorage
      * items in turn cost tables: edge from, edge to, getCosts, pointer to next
      * cost entry of same node
      */
-    private final int TC_FROM, TC_TO, TC_FLAGS, TC_NEXT;
+    protected final int TC_FROM;
+	protected final int TC_TO;
+	private final int TC_FLAGS;
+	protected final int TC_NEXT;
 
-    private DataAccess turnCosts;
+    protected DataAccess turnCosts;
     private int turnCostsEntryIndex = -4;
-    private int turnCostsEntryBytes;
+    protected int turnCostsEntryBytes;
     private int turnCostsCount;
 
     private GraphStorage graph;
-    private NodeAccess nodeAccess;
+    protected NodeAccess nodeAccess;
 
     public TurnCostStorage()
     {

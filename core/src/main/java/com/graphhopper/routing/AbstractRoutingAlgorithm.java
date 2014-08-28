@@ -96,7 +96,7 @@ public abstract class AbstractRoutingAlgorithm implements RoutingAlgorithm
     }
 
     protected boolean accept( EdgeIterator iter, int prevOrNextEdgeId )
-    {
+    {   // this can be removed u turn is handled by TurnWeighting
         if (!traversalMode.hasUTurnSupport() && iter.getEdge() == prevOrNextEdgeId)
             return false;
 

@@ -24,6 +24,7 @@ import com.graphhopper.storage.DataAccess;
 import com.graphhopper.storage.DAType;
 import com.graphhopper.storage.GHDirectory;
 import com.graphhopper.storage.Graph;
+import com.graphhopper.storage.GraphStorage;
 import com.graphhopper.storage.LevelGraph;
 import com.graphhopper.storage.LevelGraphStorage;
 import com.graphhopper.storage.NodeAccess;
@@ -48,7 +49,7 @@ import org.slf4j.LoggerFactory;
  */
 public class PrepareContractionHierarchies extends AbstractAlgoPreparation<PrepareContractionHierarchies>
 {
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final static Logger logger = LoggerFactory.getLogger(PrepareContractionHierarchies.class);
     private final PreparationWeighting prepareWeighting;
     private final FlagEncoder prepareFlagEncoder;
     private final TraversalMode traversalMode;
@@ -639,17 +640,19 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
                     continue;
 
              
-                int incomingEdgeOriginal=getOriginal(incomingEdges,true);
-                int outgoingEdgeOriginal=getOriginal(outgoingEdges,false);
                 
-                
-                // swap?
-                boolean forwardEdge=u_fromNode<w_toNode;
-                if (!forwardEdge){
-                	int aux=incomingEdgeOriginal;
-                	incomingEdgeOriginal=outgoingEdgeOriginal;
-                	outgoingEdgeOriginal=aux;
+                int originalEdgeIdForLowerNodeIdSide;
+                int originalEdgeIdForHigherNodeIdSide;
+                boolean fromNodeHasLowerNodeId=u_fromNode<w_toNode;
+                // toNode <- outgoingEdges.adjNode
+                // fromNode <-incomingEdges.adjNode
+                if (fromNodeHasLowerNodeId){
+                	originalEdgeIdForLowerNodeIdSide=getOriginalEdgeIdClosestToAdjNode(incomingEdges);
+                	originalEdgeIdForHigherNodeIdSide=getOriginalEdgeIdClosestToAdjNode(outgoingEdges);	
                 			
+                } else {
+                	originalEdgeIdForLowerNodeIdSide=getOriginalEdgeIdClosestToAdjNode(outgoingEdges);
+                	originalEdgeIdForHigherNodeIdSide=getOriginalEdgeIdClosestToAdjNode(incomingEdges);
                 }
          	   
                 
@@ -657,7 +660,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
                 sch.foundShortcut(u_fromNode, w_toNode,
                         existingDirectWeight, existingDistSum,
                         outgoingEdges,
-                        skippedEdge1, incomingEdgeOrigCount,incomingEdgeOriginal,outgoingEdgeOriginal);
+                        skippedEdge1, incomingEdgeOrigCount,originalEdgeIdForLowerNodeIdSide,originalEdgeIdForHigherNodeIdSide);
             }
         }
         if (sch instanceof AddShortcutHandler)
@@ -996,34 +999,58 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
         return "PREPARE|CH|dijkstrabi";
     }
     
-    
-    public static int  getOriginal(EdgeIteratorState iter,boolean from){
+    public static int  getOriginal(Graph graphStorage,int edgeId,int adjNode,boolean from){
+    	// no edge defined
+    	if (edgeId==EdgeIterator.NO_EDGE)
+    		return edgeId;
+    	
+    	// check that the edge is in the graph
+//    	int maxEdgeId=graphStorage.getAllEdges().getMaxId();
+//    	if (edgeId>=maxEdgeId)
+//    		return edgeId;
+    	
+    	// unfortunately there is no other way around without modifying
+    	// the graph interface
+    	EdgeIteratorState iter=null;
+    	try {
+    		iter=graphStorage.getEdgeProps(edgeId, adjNode);
+    	} catch (IllegalStateException ise) {
+    		return edgeId;
+    	}
+    	return getOriginalEdgeIdClosestToAdjNode(iter);
+    	
+    }
+    public static int  getOriginalEdgeIdClosestToAdjNode(EdgeIteratorState iter){
+    	return getOriginalEdgeIdClosestTo(iter,true);
+    }
+    public static int  getOriginalEdgeIdClosestToBaseNode(EdgeIteratorState iter){
+    	return getOriginalEdgeIdClosestTo(iter,false);
+    }
+    public static int  getOriginalEdgeIdClosestTo(EdgeIteratorState iter,boolean toAdjNode){
     	
     	// why VirtualEdgeIterator implements EdgeSkipIterState ?
     	if (iter instanceof QueryGraph.VirtualEdgeIterator || iter instanceof QueryGraph.VirtualEdgeIState){
+    		if (logger.isDebugEnabled()) logger.debug("edge is virtual:"+iter.getEdge());
     		return iter.getEdge();
     	} else if (iter instanceof EdgeSkipIterState){
     		EdgeSkipIterState edge=(EdgeSkipIterState) iter;
 	    	
 	    	
-	 	    int incomingEdgeOriginalFrom=edge.getFromOriginalEdge();
+	 	    int originalEdgeIdFromLowerNodeId=edge.getFromOriginalEdge();
 	 	   
-	        if (incomingEdgeOriginalFrom==EdgeIterator.NO_EDGE)
+	        if (originalEdgeIdFromLowerNodeId==EdgeIterator.NO_EDGE)
 	     	   return edge.getEdge();
 	        else {
-	     	   int incomingEdgeOriginalTo=edge.getFromOriginalEdge();
-	     	   boolean forwardEdge=(edge.getAdjNode()>edge.getBaseNode());
-	     	   
-	     	   if (from)
-		        	   if (forwardEdge)
-		        		   return incomingEdgeOriginalFrom;
-		        	   else
-		        		   return incomingEdgeOriginalTo;
-	     	   else // keep it easy for readers :P
-	     		   if (forwardEdge)
-	     			   return incomingEdgeOriginalTo;
-		        	   else
-		        		   return incomingEdgeOriginalFrom;
+	     	   int originalEdgeIdFromHigherNodeId=edge.getToOriginalEdge();
+	     	   boolean adjNodeHasHigherNodeId=(edge.getAdjNode()>edge.getBaseNode());
+	     	  
+	     	   if (adjNodeHasHigherNodeId==toAdjNode)
+	     		   // forwardEdge and we want the adjNode or !forwardEdge and we want the baseNode
+		       	   return originalEdgeIdFromHigherNodeId;
+		       else
+	     		   // !forwardEdge and we want the adjNode or forwardEdge and we want the baseNode
+		           return originalEdgeIdFromLowerNodeId;
+	     	  
 	        
 	        }
     	} else {

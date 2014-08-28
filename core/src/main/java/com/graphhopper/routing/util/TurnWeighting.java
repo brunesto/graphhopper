@@ -17,6 +17,11 @@
  */
 package com.graphhopper.routing.util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.graphhopper.routing.ch.PrepareContractionHierarchies;
+import com.graphhopper.storage.GraphStorage;
 import com.graphhopper.storage.TurnCostStorage;
 import com.graphhopper.util.EdgeIterator;
 import com.graphhopper.util.EdgeIteratorState;
@@ -29,18 +34,20 @@ import com.graphhopper.util.EdgeIteratorState;
  */
 public class TurnWeighting implements Weighting
 {
+	private final static Logger logger = LoggerFactory.getLogger(TurnWeighting.class);
     /**
      * Encoder, which decodes the turn flags
      */
     private final TurnCostEncoder turnCostEncoder;
     private final TurnCostStorage turnCostStorage;
     private final Weighting superWeighting;
-    private double defaultUTurnCost = 40;
+    private double defaultUTurnCost = Double.POSITIVE_INFINITY;
+    protected GraphStorage graphStorage;
 
     /**
      * @param turnCostStorage the turn cost storage to be used
      */
-    public TurnWeighting( Weighting superWeighting, TurnCostEncoder encoder, TurnCostStorage turnCostStorage )
+    public TurnWeighting( Weighting superWeighting, GraphStorage graphStorage,TurnCostEncoder encoder, TurnCostStorage turnCostStorage )
     {
         this.turnCostEncoder = encoder;
         this.superWeighting = superWeighting;
@@ -49,6 +56,7 @@ public class TurnWeighting implements Weighting
             throw new IllegalArgumentException("No encoder set to calculate turn weight");
         if (turnCostStorage == null)
             throw new RuntimeException("No storage set to calculate turn weight");
+        this.graphStorage=graphStorage;
     }
 
     /**
@@ -73,16 +81,25 @@ public class TurnWeighting implements Weighting
         double weight = superWeighting.calcWeight(edgeState, reverse, prevOrNextEdgeId);
         if (prevOrNextEdgeId == EdgeIterator.NO_EDGE)
             return weight;
-
-        int edgeId = edgeState.getEdge();
+        
+        int originalEdgeFrom=PrepareContractionHierarchies.getOriginal(graphStorage,prevOrNextEdgeId,edgeState.getBaseNode(), reverse);
+        int originalEdgeTo=PrepareContractionHierarchies.getOriginalEdgeIdClosestToBaseNode(edgeState);
+        int nodeVia=edgeState.getBaseNode();
+        
         double turnCosts;
         if (reverse)
-            turnCosts = calcTurnWeight(edgeId, edgeState.getBaseNode(), prevOrNextEdgeId);
+        	turnCosts = calcTurnWeight(originalEdgeTo, nodeVia, originalEdgeFrom);
         else
-            turnCosts = calcTurnWeight(prevOrNextEdgeId, edgeState.getBaseNode(), edgeId);
+        	turnCosts = calcTurnWeight(originalEdgeFrom, nodeVia, originalEdgeTo);
 
-        if (turnCosts == 0 && edgeId == prevOrNextEdgeId)
+        if (logger.isDebugEnabled()) logger.debug("edgeFrom:"+originalEdgeFrom+" nodeVia:"+nodeVia+" edgeTo:"+originalEdgeTo+" turnCosts:"+turnCosts);
+        
+        
+        
+        if (turnCosts == 0 && originalEdgeFrom == originalEdgeTo){
+        	if (logger.isDebugEnabled()) logger.debug("u turn");
             return weight + defaultUTurnCost;
+        }
 
         return weight + turnCosts;
     }

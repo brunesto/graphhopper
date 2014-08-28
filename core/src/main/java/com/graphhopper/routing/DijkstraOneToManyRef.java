@@ -17,6 +17,9 @@
  */
 package com.graphhopper.routing;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 
@@ -33,6 +36,8 @@ import com.graphhopper.storage.Graph;
  */
 public class DijkstraOneToManyRef extends Dijkstra {
 
+	private static final Logger logger = LoggerFactory.getLogger(DijkstraOneToManyRef.class);
+	
 	TIntObjectMap<EdgeEntry> visited=new TIntObjectHashMap<EdgeEntry>();
 	public DijkstraOneToManyRef(Graph g, FlagEncoder encoder, Weighting weighting, TraversalMode tMode) {
 	    super(g, encoder, weighting, tMode);
@@ -60,7 +65,7 @@ public class DijkstraOneToManyRef extends Dijkstra {
 	protected void visited(EdgeEntry edgeEntry) {
 		
     	if (!visited.containsKey(edgeEntry.adjNode)){
-//    		System.err.println("visited:"+edgeEntry);
+    		if (logger.isDebugEnabled()) logger.debug("visited:"+edgeEntry);
     		visited.put(edgeEntry.adjNode, edgeEntry);
     	} else {
     		//ignore

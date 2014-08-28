@@ -88,7 +88,7 @@ public class GraphHopper implements GraphHopperAPI
     private int minNetworkSize = 200;
     private int minOnewayNetworkSize = 0;
     // for CH prepare
-    private AlgorithmPreparation prepare;
+    protected AlgorithmPreparation prepare;
     private boolean doPrepare = true;
     private boolean chEnabled = true;
     private String chWeighting = "fastest";
@@ -556,7 +556,8 @@ public class GraphHopper implements GraphHopperAPI
         // osm import
         wayPointMaxDistance = args.getDouble("osmreader.wayPointMaxDistance", wayPointMaxDistance);
         String flagEncoders = args.get("osmreader.acceptWay", "CAR");
-        encodingManager = new EncodingManager(flagEncoders, bytesForFlags);
+        if (encodingManager==null)
+        	encodingManager = new EncodingManager(flagEncoders, bytesForFlags);
         workerThreads = args.getInt("osmreader.workerThreads", workerThreads);
         enableInstructions = args.getBool("osmreader.instructions", enableInstructions);
 
@@ -709,18 +710,13 @@ public class GraphHopper implements GraphHopperAPI
 
         if (encodingManager == null)
             encodingManager = EncodingManager.create(ghLocation);
-        ExtendedStorage  extendedStorage;
-        if (encodingManager.needsTurnCostsSupport())
-            extendedStorage=new TurnCostStorage();
-        else
-            extendedStorage=new ExtendedStorage.NoExtendedStorage();
+       
         
         
         GHDirectory dir = new GHDirectory(ghLocation, dataAccessType);
-        if (chEnabled)
-            graph = new LevelGraphStorage(dir, encodingManager, hasElevation(), extendedStorage);
-        else
-            graph = new GraphHopperStorage(dir, encodingManager, hasElevation(),extendedStorage);
+        
+        instanciateGraph(dir);
+       
 
         graph.setSegmentSize(defaultSegmentSize);
 
@@ -750,7 +746,19 @@ public class GraphHopper implements GraphHopperAPI
         }
     }
 
-    /**
+    protected void instanciateGraph(GHDirectory dir) {
+    	 ExtendedStorage  extendedStorage;
+         if (encodingManager.needsTurnCostsSupport())
+             extendedStorage=new TurnCostStorage();
+         else
+             extendedStorage=new ExtendedStorage.NoExtendedStorage();
+         if (chEnabled)
+             graph = new LevelGraphStorage(dir, encodingManager, hasElevation(), extendedStorage);
+         else
+             graph = new GraphHopperStorage(dir, encodingManager, hasElevation(),extendedStorage);	
+    }
+
+	/**
      * Sets EncodingManager, does the preparation and creates the locationIndex
      */
     protected void postProcessing()
@@ -807,7 +815,7 @@ public class GraphHopper implements GraphHopperAPI
             if (!(graph.getExtendedStorage() instanceof TurnCostStorage))
                 throw new IllegalStateException("If you intent to use an encoder with turn cost support you need to properly set it up in EncodingManager before");
 
-            weighting = new TurnWeighting(weighting, encoder, (TurnCostStorage) graph.getExtendedStorage());
+            weighting = new TurnWeighting(weighting, graph,encoder, (TurnCostStorage) graph.getExtendedStorage());
         }
 
         return weighting;

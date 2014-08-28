@@ -17,6 +17,10 @@
  */
 package com.graphhopper.storage;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.graphhopper.routing.PathBidirRef;
 import com.graphhopper.routing.ch.PrepareEncoder;
 import com.graphhopper.routing.util.AllEdgesSkipIterator;
 import com.graphhopper.routing.util.EdgeFilter;
@@ -36,6 +40,8 @@ import com.graphhopper.util.EdgeSkipIterState;
  */
 public class LevelGraphStorage extends GraphHopperStorage implements LevelGraph
 {
+	private final static Logger logger = LoggerFactory.getLogger(LevelGraphStorage.class);
+	
     private static final double WEIGHT_FACTOR = 1000f;
     // 2 bits for access, for now only 32bit => not Long.MAX
     private static final long MAX_WEIGHT_LONG = (Integer.MAX_VALUE >> 2) << 2;
@@ -43,8 +49,8 @@ public class LevelGraphStorage extends GraphHopperStorage implements LevelGraph
     private int I_SKIP_EDGE1a;
     private int I_SKIP_EDGE2a;
     private int I_LEVEL;
-    private int I_FROM_ORIGINAL_EDGE;
-    private int I_TO_ORIGINAL_EDGE;
+    private int I_LOWER_NODE_ORIGINAL_EDGE; // will store the original edgeId which is closest to the node with lower id
+    private int I_HIGHER_NODE_ORIGINAL_EDGE;  // will store the original edgeId which is closest to the node with higher id
     
     
     // after the last edge only shortcuts are stored
@@ -67,8 +73,8 @@ public class LevelGraphStorage extends GraphHopperStorage implements LevelGraph
         super.initStorage();
         I_SKIP_EDGE1a = nextEdgeEntryIndex(4);
         I_SKIP_EDGE2a = nextEdgeEntryIndex(4);
-        I_FROM_ORIGINAL_EDGE = nextEdgeEntryIndex(4);
-        I_TO_ORIGINAL_EDGE = nextEdgeEntryIndex(4);
+        I_LOWER_NODE_ORIGINAL_EDGE = nextEdgeEntryIndex(4);
+        I_HIGHER_NODE_ORIGINAL_EDGE = nextEdgeEntryIndex(4);
         I_LEVEL = nextNodeEntryIndex(4);
         initNodeAndEdgeEntrySize();
     }
@@ -171,19 +177,20 @@ public class LevelGraphStorage extends GraphHopperStorage implements LevelGraph
         @Override
         public final void setOriginalEdges( int edge1, int edge2 )
         {
-            edges.setInt(edgePointer + I_FROM_ORIGINAL_EDGE, edge1);
-            edges.setInt(edgePointer + I_TO_ORIGINAL_EDGE, edge2);
+        	if (logger.isDebugEnabled()) logger.debug("edgeId:"+getEdge()+" "+getBaseNode()+" --> "+getAdjNode()+" originalEdges:"+edge1+","+edge2);
+            edges.setInt(edgePointer + I_LOWER_NODE_ORIGINAL_EDGE, edge1);
+            edges.setInt(edgePointer + I_HIGHER_NODE_ORIGINAL_EDGE, edge2);
         }
         @Override
         public final int getFromOriginalEdge()
         {
-            return edges.getInt(edgePointer + I_FROM_ORIGINAL_EDGE);
+            return edges.getInt(edgePointer + I_LOWER_NODE_ORIGINAL_EDGE);
         }
 
         @Override
         public final int getToOriginalEdge()
         {
-            return edges.getInt(edgePointer + I_TO_ORIGINAL_EDGE);
+            return edges.getInt(edgePointer + I_HIGHER_NODE_ORIGINAL_EDGE);
         }
 
         @Override
@@ -321,20 +328,20 @@ public class LevelGraphStorage extends GraphHopperStorage implements LevelGraph
         @Override
         public final void setOriginalEdges( int edge1, int edge2 )
         {
-            edges.setInt(edgePointer + I_FROM_ORIGINAL_EDGE, edge1);
-            edges.setInt(edgePointer + I_TO_ORIGINAL_EDGE, edge2);
+            edges.setInt(edgePointer + I_LOWER_NODE_ORIGINAL_EDGE, edge1);
+            edges.setInt(edgePointer + I_HIGHER_NODE_ORIGINAL_EDGE, edge2);
         }
 
         @Override
         public final int getFromOriginalEdge()
         {
-            return edges.getInt(edgePointer + I_FROM_ORIGINAL_EDGE);
+            return edges.getInt(edgePointer + I_LOWER_NODE_ORIGINAL_EDGE);
         }
 
         @Override
         public final int getToOriginalEdge()
         {
-            return edges.getInt(edgePointer + I_TO_ORIGINAL_EDGE);
+            return edges.getInt(edgePointer + I_HIGHER_NODE_ORIGINAL_EDGE);
         }
         
         
@@ -393,20 +400,20 @@ public class LevelGraphStorage extends GraphHopperStorage implements LevelGraph
         @Override
         public final void setOriginalEdges( int edge1, int edge2 )
         {
-            edges.setInt(edgePointer + I_FROM_ORIGINAL_EDGE, edge1);
-            edges.setInt(edgePointer + I_TO_ORIGINAL_EDGE, edge2);
+            edges.setInt(edgePointer + I_LOWER_NODE_ORIGINAL_EDGE, edge1);
+            edges.setInt(edgePointer + I_HIGHER_NODE_ORIGINAL_EDGE, edge2);
         }
 
         @Override
         public final int getFromOriginalEdge()
         {
-            return edges.getInt(edgePointer + I_FROM_ORIGINAL_EDGE);
+            return edges.getInt(edgePointer + I_LOWER_NODE_ORIGINAL_EDGE);
         }
 
         @Override
         public final int getToOriginalEdge()
         {
-            return edges.getInt(edgePointer + I_TO_ORIGINAL_EDGE);
+            return edges.getInt(edgePointer + I_HIGHER_NODE_ORIGINAL_EDGE);
         }
         
 
