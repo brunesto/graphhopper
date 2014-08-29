@@ -826,8 +826,13 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
                 if (finishedFrom && finishedTo)
                     return true;
 
-                // changed also the final finish condition for CH                
-                return currFrom.weight >= bestPath.getWeight() && currTo.weight >= bestPath.getWeight();
+//                return false;
+//                // changed also the final finish condition for CH         ?????       
+                boolean finished=//bestPath.getWeight()<Double.MAX_VALUE;
+                		currFrom.weight >=  bestPath.getWeight() && currTo.weight >=  bestPath.getWeight();
+                if (finished)
+                	logger.debug("finished!");
+                return finished;
             }
 
             @Override
@@ -1028,10 +1033,23 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
     }
     public static int  getOriginalEdgeIdClosestTo(EdgeIteratorState iter,boolean toAdjNode){
     	
+    	// a VirtualEdgeIterator can contain both  EdgeSkipIterStates and VirtualEdgeIStates,
+    	// so this little hack is to handle the former case
+    	if (iter instanceof QueryGraph.VirtualEdgeIterator){
+    		iter=((QueryGraph.VirtualEdgeIterator) iter).edges.get(((QueryGraph.VirtualEdgeIterator) iter).current);
+    	}
     	// why VirtualEdgeIterator implements EdgeSkipIterState ?
-    	if (iter instanceof QueryGraph.VirtualEdgeIterator || iter instanceof QueryGraph.VirtualEdgeIState){
+    	if (iter instanceof QueryGraph.VirtualEdgeIState){
     		if (logger.isDebugEnabled()) logger.debug("edge is virtual:"+iter.getEdge());
     		return iter.getEdge();
+//    	} else if (iter instanceof QueryGraph.VirtualEdgeIterator){
+//    		iter=((QueryGraph.VirtualEdgeIterator) iter).edges.get(((QueryGraph.VirtualEdgeIterator) iter).current);
+//    		if (iter instanceof QueryGraph.VirtualEdgeIState){
+//    			if (logger.isDebugEnabled()) logger.debug("edge is virtual:"+iter.getEdge());
+//    			return iter.getEdge();
+//    		}
+//    		
+//    	} 
     	} else if (iter instanceof EdgeSkipIterState){
     		EdgeSkipIterState edge=(EdgeSkipIterState) iter;
 	    	
