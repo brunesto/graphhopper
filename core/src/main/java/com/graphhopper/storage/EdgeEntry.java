@@ -24,6 +24,9 @@ package com.graphhopper.storage;
  */
 public class EdgeEntry extends Edge implements Cloneable
 {
+	public int spawnAt; // track down when this edge entry was spawn
+	public int evaluatedAt;  // track down when this edge entry was evaluated
+	
     public EdgeEntry parent;
 
     public EdgeEntry( int edgeId, int adjNode, double weight )
@@ -34,7 +37,10 @@ public class EdgeEntry extends Edge implements Cloneable
     @Override
     public EdgeEntry clone()
     {
-        return new EdgeEntry(edge, adjNode, weight);
+    	EdgeEntry edgeEntry= new EdgeEntry(edge, adjNode, weight);
+    	edgeEntry.spawnAt=spawnAt;
+    	edgeEntry.evaluatedAt=evaluatedAt;
+    	return edgeEntry;
     }
 
     public EdgeEntry cloneFull()

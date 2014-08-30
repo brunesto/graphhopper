@@ -40,6 +40,8 @@ public class Path4CH extends PathBidirRef
         super(g, encoder);
     }
 
+    
+    
     @Override
     protected void processEdge( int tmpEdge, int endNode )
     {
@@ -91,10 +93,8 @@ public class Path4CH extends PathBidirRef
             return;
         }
 
-        if (logger.isDebugEnabled()){
-        	String a="";while(a.length()<depth4debug)a+=" ";
+        if (logger.isDebugEnabled())
         	logger.debug(debugTab+"expand edgeId:"+mainEdgeState.getEdge()+" "+mainEdgeState.getBaseNode()+" --> "+mainEdgeState.getAdjNode());
-        }
         
         int skippedEdge1 = mainEdgeState.getSkippedEdge1();
         int skippedEdge2 = mainEdgeState.getSkippedEdge2();

@@ -38,7 +38,8 @@ public class PathBidirRef extends Path
        
     protected EdgeEntry edgeTo;
     private boolean switchWrapper = false;
-
+   
+    
     public PathBidirRef( Graph g, FlagEncoder encoder )
     {
         super(g, encoder);
@@ -88,7 +89,7 @@ public class PathBidirRef extends Path
         EdgeEntry currEdge = edgeEntry;
         while (EdgeIterator.Edge.isValid(currEdge.edge))
         {
-            if (logger.isDebugEnabled()) logger.debug("rev path node:"+currEdge.adjNode+" edge:"+currEdge.edge);
+            if (logger.isDebugEnabled()) logger.debug("rev path "+currEdge.adjNode+" edgeId:"+currEdge.edge+" spawnAt:"+currEdge.spawnAt+" evaluatedAt:"+currEdge.evaluatedAt);
             processEdge(currEdge.edge, currEdge.adjNode);
             currEdge = currEdge.parent;
         }
@@ -98,7 +99,7 @@ public class PathBidirRef extends Path
         int tmpEdge = currEdge.edge;
         while (EdgeIterator.Edge.isValid(tmpEdge))
         {
-            if (logger.isDebugEnabled()) logger.debug("path node:"+currEdge.adjNode+" edge:"+currEdge.edge);
+            if (logger.isDebugEnabled()) logger.debug("path node:"+currEdge.adjNode+" edgeId:"+currEdge.edge+" spawnAt:"+currEdge.spawnAt+" evaluatedAt:"+currEdge.evaluatedAt);
             currEdge = currEdge.parent;
             processEdge(tmpEdge, currEdge.adjNode);
             tmpEdge = currEdge.edge;

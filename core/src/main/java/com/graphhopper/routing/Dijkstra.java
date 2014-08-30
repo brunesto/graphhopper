@@ -98,7 +98,8 @@ public class Dijkstra extends AbstractRoutingAlgorithm
     	
     	
     	 this.to = to;
-
+    	 if (logger.isDebugEnabled()) logger.debug("toNode:"+to);
+    	    
     	 if (currEdge==null)
  			return NOT_FOUND;
      	
@@ -110,18 +111,21 @@ public class Dijkstra extends AbstractRoutingAlgorithm
             if (logger.isDebugEnabled()) logger.debug("\n\n\n\n"+visitedNodes);
 
             int startNode = currEdge.adjNode;
-            if (logger.isDebugEnabled()) logger.debug("startNode:"+startNode +" currEdge.weight:"+currEdge.weight);
+            if (logger.isDebugEnabled()) logger.debug("startNode:"+startNode +" currEdge.weight:"+currEdge.weight+" from edgeId:"+currEdge.edge);
             EdgeIterator iter = explorer.setBaseNode(startNode);
             while (iter.next())
             {
+            	if (logger.isDebugEnabled()) logger.debug("edgeId:"+iter.getEdge()+" "+startNode+" -->"+iter.getAdjNode());
                 if (!accept(iter, currEdge.edge))
                     continue;
 
                 int iterationKey = traversalMode.createTraversalId(iter, false);
-                double tmpWeight = weighting.calcWeight(iter, false, currEdge.edge) + currEdge.weight;
+                double edgeWeight=weighting.calcWeight(iter, false, currEdge.edge);
+                double tmpWeight =  edgeWeight+ currEdge.weight;
+                if (logger.isDebugEnabled()) logger.debug("edgeWeight:"+edgeWeight+" tmpWeight:"+tmpWeight);
                 if (Double.isInfinite(tmpWeight))
                     continue;
-                if (logger.isDebugEnabled()) logger.debug("  adjNode:"+iter.getAdjNode()+" tmpWeight:"+tmpWeight);
+                
                 EdgeEntry nEdge = fromMap.get(iterationKey);
                 if (nEdge == null)
                 {

@@ -67,6 +67,7 @@ public class PreparationWeighting implements Weighting
                 	return computedWeight;
                 else
                 	return cachedWeight;
+//                return computedWeight;
             }
         }
         return userWeighting.calcWeight(edgeState, reverse, prevOrNextEdgeId);

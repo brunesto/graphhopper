@@ -182,13 +182,14 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
     
     
     
-    int cnt=0;
+    int evaluationCnt=0;
     
     void fillEdges( EdgeEntry currEdge, PriorityQueue<EdgeEntry> prioQueue,
             TIntObjectMap<EdgeEntry> shortestWeightMap, EdgeExplorer explorer, boolean reverse )
     {
-    	if (logger.isDebugEnabled()) logger.debug("\n\n\n\n"+cnt);
-    	cnt++;
+    	if (logger.isDebugEnabled()) logger.debug("\n\n\n\nevaluation:"+evaluationCnt);
+    	currEdge.evaluatedAt=evaluationCnt;
+    	
         int currNode = currEdge.adjNode;
         if (logger.isDebugEnabled()) logger.debug("currEdge:"+(currEdge.parent!=null?currEdge.parent.adjNode:"")+" --> "+currEdge.adjNode+" edgeId:"+currEdge.edge);
         
@@ -228,6 +229,7 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
             if (ee == null)
             {
                 ee = new EdgeEntry(iter.getEdge(), iter.getAdjNode(), tmpWeight);
+                ee.spawnAt=evaluationCnt;
                 ee.parent = currEdge;
                 shortestWeightMap.put(iterationKey, ee);
                 prioQueue.add(ee);
@@ -244,6 +246,8 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
             if (updateBestPath)
                 updateBestPath(iter, ee, iterationKey);
         }
+//        logger.info("evaluation:"+evaluationCnt);
+        evaluationCnt++;
     }
 
     @Override
@@ -275,6 +279,7 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
             }
         }
 
+//        logger.info("newWeight:"+newWeight);
         if (newWeight < bestPath.getWeight())
         {
             bestPath.setSwitchToFrom(reverse);
@@ -283,6 +288,8 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
             bestPath.setEdgeEntryTo(entryOther);
         }
     }
+    
+    
 
     @Override
     public String getName()

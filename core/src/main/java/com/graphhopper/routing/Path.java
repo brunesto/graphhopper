@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
  */
 public class Path
 {
-	private final static Logger logger = LoggerFactory.getLogger(PathBidirRef.class);
+	private final static Logger logger = LoggerFactory.getLogger(Path.class);
 	
     private static final AngleCalc ac = new AngleCalc();
     protected Graph graph;
@@ -186,18 +186,21 @@ public class Path
 
             EdgeIteratorState iter = graph.getEdgeProps(goalEdge.edge, goalEdge.adjNode);
             double timeOnEdge = calcMillis(iter.getDistance(), iter.getFlags(), false)/1000.0;
-            double speed=encoder.getSpeed(iter.getFlags());
-            double checkTime=iter.getDistance()/(speed/3.6);
             
             
             
             
-            if (logger.isDebugEnabled())
-            	logger.debug(graph.getNodeAccess().getLatitude(iter.getBaseNode())+","+graph.getNodeAccess().getLongitude(iter.getBaseNode())+" --> "+graph.getNodeAccess().getLatitude(iter.getAdjNode())+","+graph.getNodeAccess().getLongitude(iter.getAdjNode())+" distance:"+iter.getDistance()+" speed:"+speed+" time:"+timeOnEdge);
+            if (logger.isDebugEnabled()){
+            	double speed=encoder.getSpeed(iter.getFlags());
+            	logger.debug("edgeId:"+iter.getEdge()+" "+iter.getBaseNode()+" --> "+iter.getAdjNode()+" distance:"+iter.getDistance()+" speed:"+speed+" time:"+timeOnEdge);
+//                double checkTime=iter.getDistance()/(speed/3.6);
+//                if (Math.abs(checkTime-timeOnEdge)>0.1)
+//                	logger.error("checkTime:"+checkTime);    
+//            	logger.debug(graph.getNodeAccess().getLatitude(iter.getBaseNode())+","+graph.getNodeAccess().getLongitude(iter.getBaseNode())+" --> "+graph.getNodeAccess().getLatitude(iter.getAdjNode())+","+graph.getNodeAccess().getLongitude(iter.getAdjNode())+" distance:"+iter.getDistance()+" speed:"+speed+" time:"+timeOnEdge);
+            }
      
             	
-            if (Math.abs(checkTime-timeOnEdge)>0.1)
-            	logger.error("checkTime:"+checkTime);
+            
             
             
             
