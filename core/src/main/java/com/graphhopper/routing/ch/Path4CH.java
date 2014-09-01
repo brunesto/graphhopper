@@ -17,6 +17,9 @@
  */
 package com.graphhopper.routing.ch;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.graphhopper.routing.PathBidirRef;
 import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.storage.Graph;
@@ -31,31 +34,68 @@ import com.graphhopper.util.EdgeSkipIterState;
  */
 public class Path4CH extends PathBidirRef
 {
+	private final static Logger logger = LoggerFactory.getLogger(Path4CH.class);
+	   
     public Path4CH( Graph g, FlagEncoder encoder )
     {
         super(g, encoder);
     }
+
     
     @Override
     protected final void processEdge( int tmpEdge, int endNode )
     {
+    	EdgeSkipIterState mainEdgeState=(EdgeSkipIterState) graph.getEdgeProps(tmpEdge, endNode);
+    	if (logger.isDebugEnabled()){
+    		
+    		 double dist = mainEdgeState.getDistance();
+    		 if (mainEdgeState.isShortcut()){
+	    		 double weight=mainEdgeState.getWeight();
+	    		 logger.debug("expand edgeId:"+mainEdgeState.getEdge()+" "+mainEdgeState.getBaseNode()+","+" --> "+mainEdgeState.getAdjNode()+","+graph.getNodeAccess().getLongitude(mainEdgeState.getAdjNode())+" distance:"+mainEdgeState.getDistance()+" is a shortcut with weight:"+weight);
+    		 } else
+    			 logger.debug("expand edgeId:"+mainEdgeState.getEdge()+" "+mainEdgeState.getBaseNode()+","+" --> "+mainEdgeState.getAdjNode()+","+graph.getNodeAccess().getLongitude(mainEdgeState.getAdjNode())+" distance:"+mainEdgeState.getDistance()+" is a plain edge");
+             
+        	
+    	}
+        
+    	
         // Shortcuts do only contain valid weight so first expand before adding
         // to distance and time
-        expandEdge((EdgeSkipIterState) graph.getEdgeProps(tmpEdge, endNode), false);
+        expandEdge(mainEdgeState, false,0);
     }
 
-    private void expandEdge( EdgeSkipIterState mainEdgeState, boolean reverse )
+    private void expandEdge( EdgeSkipIterState mainEdgeState, boolean reverse,int depth4debug )
     {
+    	 String debugTab="";
+    	 if (logger.isDebugEnabled()){
+         	while(debugTab.length()<depth4debug)debugTab+=" ";
+    	 }
+    	
         if (!mainEdgeState.isShortcut())
         {
             double dist = mainEdgeState.getDistance();
             distance += dist;
             long flags = mainEdgeState.getFlags();
-            millis += calcMillis(dist, flags, reverse);
+            double timeOnEdge=calcMillis(dist, flags, reverse);
+            millis += timeOnEdge;
             addEdge(mainEdgeState.getEdge());
+            
+            
+            
+            
+            if (logger.isDebugEnabled()){
+            	double speed=encoder.getSpeed(mainEdgeState.getFlags());
+            	logger.debug(debugTab+"edgeId:"+mainEdgeState.getEdge()+" "+mainEdgeState.getBaseNode()+" --> "+mainEdgeState.getAdjNode()+" distance:"+mainEdgeState.getDistance()+" speed:"+speed+" time:"+timeOnEdge+" reverse:"+reverse);
+            	logger.debug(debugTab+graph.getNodeAccess().getLatitude(mainEdgeState.getBaseNode())+","+graph.getNodeAccess().getLongitude(mainEdgeState.getBaseNode())+" --> "+graph.getNodeAccess().getLatitude(mainEdgeState.getAdjNode())+","+graph.getNodeAccess().getLongitude(mainEdgeState.getAdjNode())+" distance:"+mainEdgeState.getDistance()+" speed:"+speed+" time:"+timeOnEdge);
+            }
+
+            
             return;
         }
 
+        if (logger.isDebugEnabled())
+        	logger.debug(debugTab+"expand edgeId:"+mainEdgeState.getEdge()+" "+mainEdgeState.getBaseNode()+" --> "+mainEdgeState.getAdjNode());
+        
         int skippedEdge1 = mainEdgeState.getSkippedEdge1();
         int skippedEdge2 = mainEdgeState.getSkippedEdge2();
         int from = mainEdgeState.getBaseNode(), to = mainEdgeState.getAdjNode();
@@ -76,14 +116,14 @@ public class Path4CH extends PathBidirRef
             if (empty)
                 edgeState = (EdgeSkipIterState) graph.getEdgeProps(skippedEdge2, to);
 
-            expandEdge(edgeState, false);
+            expandEdge(edgeState, false,depth4debug+1);
 
             if (empty)
                 edgeState = (EdgeSkipIterState) graph.getEdgeProps(skippedEdge1, from);
             else
                 edgeState = (EdgeSkipIterState) graph.getEdgeProps(skippedEdge2, from);
 
-            expandEdge(edgeState, true);
+            expandEdge(edgeState, true,depth4debug+1);
         } else
         {
             EdgeSkipIterState iter = (EdgeSkipIterState) graph.getEdgeProps(skippedEdge1, from);
@@ -91,14 +131,14 @@ public class Path4CH extends PathBidirRef
             if (empty)
                 iter = (EdgeSkipIterState) graph.getEdgeProps(skippedEdge2, from);
 
-            expandEdge(iter, true);
+            expandEdge(iter, true,depth4debug+1);
 
             if (empty)
                 iter = (EdgeSkipIterState) graph.getEdgeProps(skippedEdge1, to);
             else
                 iter = (EdgeSkipIterState) graph.getEdgeProps(skippedEdge2, to);
 
-            expandEdge(iter, false);
+            expandEdge(iter, false,depth4debug+1);
         }
     }
 }

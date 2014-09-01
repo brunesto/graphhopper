@@ -18,6 +18,10 @@
  */
 package com.graphhopper.routing.ch;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.graphhopper.routing.DijkstraBidirectionRef;
 import com.graphhopper.routing.util.Weighting;
 import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.util.EdgeSkipIterState;
@@ -29,6 +33,8 @@ import com.graphhopper.util.EdgeSkipIterState;
  */
 public class PreparationWeighting implements Weighting
 {
+	private static final Logger logger = LoggerFactory.getLogger(PreparationWeighting.class);
+	
     private final Weighting userWeighting;
 
     public PreparationWeighting( Weighting userWeighting )
@@ -48,9 +54,21 @@ public class PreparationWeighting implements Weighting
         if (edgeState instanceof EdgeSkipIterState)
         {
             EdgeSkipIterState tmp = (EdgeSkipIterState) edgeState;
-            if (tmp.isShortcut())
+            if (tmp.isShortcut()) {
                 // if a shortcut is in both directions the weight is identical => no need for 'reverse'
-                return tmp.getWeight();
+            	
+            	// hack for turn restrictions
+                double cachedWeight=tmp.getWeight();
+                double computedWeight=userWeighting.calcWeight(edgeState, reverse, prevOrNextEdgeId);
+//                if (cachedWeight!=computedWeight){
+//                	logger.error("cachedWeight:"+cachedWeight+" != computedWeight:"+computedWeight);
+//                }
+                if (Double.isInfinite(computedWeight))
+                	return computedWeight;
+                else
+                	return cachedWeight;
+//                return computedWeight;
+            }
         }
         return userWeighting.calcWeight(edgeState, reverse, prevOrNextEdgeId);
 

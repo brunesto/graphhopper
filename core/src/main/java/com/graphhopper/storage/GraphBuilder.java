@@ -18,6 +18,7 @@
 package com.graphhopper.storage;
 
 import com.graphhopper.routing.util.EncodingManager;
+import com.graphhopper.storage.ExtendedStorage.NoExtendedStorage;
 
 /**
  * For now this is just a helper class to quickly create a GraphStorage.
@@ -111,17 +112,19 @@ public class GraphBuilder
         else
             dir = new RAMDirectory(location, store);
 
+        ExtendedStorage extendedStorage;
+        if (encodingManager.needsTurnCostsSupport())
+        	extendedStorage= new TurnCostStorage();
+        else
+        	extendedStorage=new ExtendedStorage.NoExtendedStorage();
+    
+        
         GraphStorage graph;
         if (level)
-            graph = new LevelGraphStorage(dir, encodingManager, elevation);
+            graph = new LevelGraphStorage(dir, encodingManager, elevation,extendedStorage);
         else
-        {
-            if (encodingManager.needsTurnCostsSupport())
-                graph = new GraphHopperStorage(dir, encodingManager, elevation, new TurnCostStorage());
-            else
-                graph = new GraphHopperStorage(dir, encodingManager, elevation);
-        }
-
+            graph = new GraphHopperStorage(dir, encodingManager, elevation,extendedStorage);
+       
         return graph;
     }
 

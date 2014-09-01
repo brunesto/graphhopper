@@ -22,6 +22,9 @@ import gnu.trove.map.hash.TIntObjectHashMap;
 
 import java.util.PriorityQueue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.util.Weighting;
@@ -38,11 +41,17 @@ import com.graphhopper.util.EdgeIterator;
  */
 public class Dijkstra extends AbstractRoutingAlgorithm
 {
+	private static final Logger logger = LoggerFactory.getLogger(Dijkstra.class);
+		
+	protected static final int NOT_FOUND = -1;
+	
     private TIntObjectMap<EdgeEntry> fromMap;
     private PriorityQueue<EdgeEntry> fromHeap;
     private int visitedNodes;
-    private int to = -1;
-    private EdgeEntry currEdge;
+    protected int to = -1;
+    protected EdgeEntry currEdge;
+    double limitWeight=Double.MAX_VALUE;
+	int limitVisitedNodes=-1;
 
     public Dijkstra( Graph g, FlagEncoder encoder, Weighting weighting, TraversalMode tMode )
     {
@@ -56,40 +65,67 @@ public class Dijkstra extends AbstractRoutingAlgorithm
         fromMap = new TIntObjectHashMap<EdgeEntry>(size);
     }
 
+    public void setFrom(int from){
+    	 currEdge = createEdgeEntry(from, 0);
+         if (!traversalMode.isEdgeBased())
+         {
+             fromMap.put(from, currEdge);
+         }
+    }
     @Override
     public Path calcPath( int from, int to )
     {
         checkAlreadyRun();
-        this.to = to;
-        currEdge = createEdgeEntry(from, 0);
-        if (!traversalMode.isEdgeBased())
-        {
-            fromMap.put(from, currEdge);
-        }
-        return runAlgo();
+        setFrom(from);
+        return runAlgo(to);
     }
-
-    private Path runAlgo()
+    
+    protected Path runAlgo(int to)
     {
+    	
+    	int node=findEndNode(to);
+    	if (node==NOT_FOUND)
+    		return createEmptyPath();
+    	else {
+    		if (node!=to)
+    			throw new IllegalStateException("seems we were routed not where we asked for to:"+to+" routed node:"+node);
+    		return extractPath();
+    	}
+    }
+   
+    public int findEndNode(int to) {
+	    
+    	
+    	
+    	 this.to = to;
+    	 if (logger.isDebugEnabled()) logger.debug("toNode:"+to);
+    	    
+    	 if (currEdge==null)
+ 			return NOT_FOUND;
+     	
+   
         EdgeExplorer explorer = outEdgeExplorer;
         while (true)
         {
             visitedNodes++;
-            if (finished())
-                break;
+            if (logger.isDebugEnabled()) logger.debug("\n\n\n\n"+visitedNodes);
 
             int startNode = currEdge.adjNode;
+            if (logger.isDebugEnabled()) logger.debug("startNode:"+startNode +" currEdge.weight:"+currEdge.weight+" from edgeId:"+currEdge.edge);
             EdgeIterator iter = explorer.setBaseNode(startNode);
             while (iter.next())
             {
+            	if (logger.isDebugEnabled()) logger.debug("edgeId:"+iter.getEdge()+" "+startNode+" -->"+iter.getAdjNode());
                 if (!accept(iter, currEdge.edge))
                     continue;
 
                 int iterationKey = traversalMode.createTraversalId(iter, false);
-                double tmpWeight = weighting.calcWeight(iter, false, currEdge.edge) + currEdge.weight;
+                double edgeWeight=weighting.calcWeight(iter, false, currEdge.edge);
+                double tmpWeight =  edgeWeight+ currEdge.weight;
+                if (logger.isDebugEnabled()) logger.debug("edgeWeight:"+edgeWeight+" tmpWeight:"+tmpWeight);
                 if (Double.isInfinite(tmpWeight))
                     continue;
-
+                
                 EdgeEntry nEdge = fromMap.get(iterationKey);
                 if (nEdge == null)
                 {
@@ -97,6 +133,7 @@ public class Dijkstra extends AbstractRoutingAlgorithm
                     nEdge.parent = currEdge;
                     fromMap.put(iterationKey, nEdge);
                     fromHeap.add(nEdge);
+                    
                 } else if (nEdge.weight > tmpWeight)
                 {
                     fromHeap.remove(nEdge);
@@ -109,21 +146,37 @@ public class Dijkstra extends AbstractRoutingAlgorithm
 
                 updateBestPath(iter, nEdge, iterationKey);
             }
+            visited(currEdge);
 
-            if (fromHeap.isEmpty())
-                return createEmptyPath();
+            if (finished())
+                break;
+            
+            if (fromHeap.isEmpty() || (limitVisitedNodes!=-1 && visitedNodes >= limitVisitedNodes))
+            {
+            	currEdge=null;
+                return NOT_FOUND;
+            }
+            
+           
 
             currEdge = fromHeap.poll();
             if (currEdge == null)
                 throw new AssertionError("Empty edge cannot happen");
         }
-        return extractPath();
+        if (currEdge == null || !finished())
+        	return NOT_FOUND;
+        return currEdge.adjNode;
     }
 
-    @Override
+    protected void visited(EdgeEntry edgeEntry) {
+    	// placeholder
+    }
+
+	
+	@Override
     protected boolean finished()
     {
-        return currEdge.adjNode == to;
+        return currEdge.weight>=limitWeight || currEdge.adjNode == to;
     }
 
     @Override
@@ -131,9 +184,15 @@ public class Dijkstra extends AbstractRoutingAlgorithm
     {
         if (currEdge == null || !finished())
             return createEmptyPath();
-        return new Path(graph, flagEncoder).setWeight(currEdge.weight).setEdgeEntry(currEdge).extract();
+        return extractPath(currEdge);
+    }
+  
+    protected Path extractPath(EdgeEntry edgeEntry)
+    {
+        return new Path(graph, flagEncoder).setWeight(edgeEntry.weight).setEdgeEntry(edgeEntry).extract();
     }
 
+    
     @Override
     public String getName()
     {
@@ -145,4 +204,31 @@ public class Dijkstra extends AbstractRoutingAlgorithm
     {
         return visitedNodes;
     }
+
+	public void clear() {
+		initCollections(1000);
+		limitWeight=Double.MAX_VALUE; // should this be reset?
+		to=-1;
+		visitedNodes=0;
+		limitVisitedNodes=-1;
+		currEdge=null;
+	    
+    }
+
+	public void close() {
+		currEdge=null;
+		fromHeap=null;
+		fromMap=null;
+	    
+    }
+
+	public Dijkstra setLimitWeight(double limitWeight) {
+		this.limitWeight = limitWeight;
+		return this;
+	}
+
+	public Dijkstra setLimitVisitedNodes(int limitVisitedNodes) {
+		this.limitVisitedNodes = limitVisitedNodes;
+		return this;
+	}
 }

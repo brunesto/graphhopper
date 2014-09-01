@@ -22,6 +22,10 @@ import gnu.trove.map.hash.TIntObjectHashMap;
 
 import java.util.PriorityQueue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.graphhopper.routing.ch.PrepareContractionHierarchies;
 import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.util.Weighting;
@@ -42,6 +46,8 @@ import com.graphhopper.util.GHUtility;
  */
 public class DijkstraBidirectionRef extends AbstractBidirAlgo
 {
+	private static final Logger logger = LoggerFactory.getLogger(DijkstraBidirectionRef.class);
+	
     private PriorityQueue<EdgeEntry> openSetFrom;
     private PriorityQueue<EdgeEntry> openSetTo;
     private TIntObjectMap<EdgeEntry> bestWeightMapFrom;
@@ -136,6 +142,7 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
     @Override
     public boolean fillEdgesFrom()
     {
+    	if (logger.isDebugEnabled()) logger.debug("\nfillEdgesFrom");
         if (openSetFrom.isEmpty())
             return false;
 
@@ -149,6 +156,7 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
     @Override
     public boolean fillEdgesTo()
     {
+    	if (logger.isDebugEnabled()) logger.debug("\nfillEdgesTo");
         if (openSetTo.isEmpty())
             return false;
         currTo = openSetTo.poll();
@@ -171,18 +179,49 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
         return currFrom.weight + currTo.weight >= bestPath.getWeight();
     }
 
+    
+    
+    
+    int evaluationCnt=0;
+    
     void fillEdges( EdgeEntry currEdge, PriorityQueue<EdgeEntry> prioQueue,
             TIntObjectMap<EdgeEntry> shortestWeightMap, EdgeExplorer explorer, boolean reverse )
     {
+    	if (logger.isDebugEnabled()) logger.debug("\n\n\n\nevaluation:"+evaluationCnt);
+    	currEdge.evaluatedAt=evaluationCnt;
+    	
         int currNode = currEdge.adjNode;
+        if (logger.isDebugEnabled()) logger.debug("currEdge:"+(currEdge.parent!=null?currEdge.parent.adjNode:"")+" --> "+currEdge.adjNode+" edgeId:"+currEdge.edge);
+        
+        
         EdgeIterator iter = explorer.setBaseNode(currNode);
+        
+        
+//        int originalEnteringEdgeId=PrepareContractionHierarchies.getOriginal(graph,currEdge.edge, currEdge.adjNode, false);
+//        if (logger.isDebugEnabled()) logger.debug("originalEnteringEdgeId:"+originalEnteringEdgeId);
         while (iter.next())
         {
-            if (!accept(iter, currEdge.edge))
-                continue;
-
+        	if (logger.isDebugEnabled()) logger.debug("  adjNode:"+iter.getAdjNode());
+            if (!accept(iter, currEdge.edge)){
+            	if (logger.isDebugEnabled()) logger.debug("  rejected");
+            	continue;
+            }
+//            int originalExitingEdgeId=PrepareContractionHierarchies.getOriginalEdgeIdClosestToAdjNode(iter);
+            
+//            // this should be part of the filter
+//            if (logger.isDebugEnabled()) logger.debug("originalExitingEdgeId:"+originalExitingEdgeId);
+//            if (!traversalMode.hasUTurnSupport() && originalEnteringEdgeId!=EdgeIterator.NO_EDGE && originalEnteringEdgeId==originalExitingEdgeId){
+//            	if (logger.isDebugEnabled()) logger.debug("  u turn");
+//            	continue;
+//            }
+            
+            
             int iterationKey = traversalMode.createTraversalId(iter, reverse);
+            if (logger.isDebugEnabled()) logger.debug("iterationKey:"+iterationKey+" is for edgeId:"+iter.getEdge()+" "+iter.getBaseNode()+" --> "+iter.getAdjNode()+" reverse:"+reverse);
+            
+            
             double tmpWeight = weighting.calcWeight(iter, reverse, currEdge.edge) + currEdge.weight;
+            if (logger.isDebugEnabled()) logger.debug("  tmpWeight:"+tmpWeight);
             if (Double.isInfinite(tmpWeight))
                 continue;
 
@@ -190,6 +229,7 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
             if (ee == null)
             {
                 ee = new EdgeEntry(iter.getEdge(), iter.getAdjNode(), tmpWeight);
+                ee.spawnAt=evaluationCnt;
                 ee.parent = currEdge;
                 shortestWeightMap.put(iterationKey, ee);
                 prioQueue.add(ee);
@@ -206,6 +246,8 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
             if (updateBestPath)
                 updateBestPath(iter, ee, iterationKey);
         }
+//        logger.info("evaluation:"+evaluationCnt);
+        evaluationCnt++;
     }
 
     @Override
@@ -237,6 +279,7 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
             }
         }
 
+//        logger.info("newWeight:"+newWeight);
         if (newWeight < bestPath.getWeight())
         {
             bestPath.setSwitchToFrom(reverse);
@@ -245,6 +288,8 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
             bestPath.setEdgeEntryTo(entryOther);
         }
     }
+    
+    
 
     @Override
     public String getName()

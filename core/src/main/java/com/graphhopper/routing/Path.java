@@ -22,10 +22,15 @@ import com.graphhopper.storage.EdgeEntry;
 import com.graphhopper.storage.Graph;
 import com.graphhopper.storage.NodeAccess;
 import com.graphhopper.util.*;
+
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
+
 import java.util.ArrayList;
 import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Stores the nodes for the found path of an algorithm. It additionally needs the edgeIds to make
@@ -37,9 +42,11 @@ import java.util.List;
  */
 public class Path
 {
+	private final static Logger logger = LoggerFactory.getLogger(Path.class);
+	
     private static final AngleCalc ac = new AngleCalc();
     protected Graph graph;
-    private FlagEncoder encoder;
+    protected FlagEncoder encoder;
     protected double distance;
     // we go upwards (via EdgeEntry.parent) from the goal node to the origin node
     protected boolean reverseOrder = true;
@@ -175,6 +182,28 @@ public class Path
         setEndNode(goalEdge.adjNode);
         while (EdgeIterator.Edge.isValid(goalEdge.edge))
         {
+            
+
+            EdgeIteratorState iter = graph.getEdgeProps(goalEdge.edge, goalEdge.adjNode);
+            double timeOnEdge = calcMillis(iter.getDistance(), iter.getFlags(), false)/1000.0;
+            
+            
+            
+            
+            if (logger.isDebugEnabled()){
+            	double speed=encoder.getSpeed(iter.getFlags());
+            	logger.debug("edgeId:"+iter.getEdge()+" "+iter.getBaseNode()+" --> "+iter.getAdjNode()+" distance:"+iter.getDistance()+" speed:"+speed+" time:"+timeOnEdge);
+//                double checkTime=iter.getDistance()/(speed/3.6);
+//                if (Math.abs(checkTime-timeOnEdge)>0.1)
+//                	logger.error("checkTime:"+checkTime);    
+//            	logger.debug(graph.getNodeAccess().getLatitude(iter.getBaseNode())+","+graph.getNodeAccess().getLongitude(iter.getBaseNode())+" --> "+graph.getNodeAccess().getLatitude(iter.getAdjNode())+","+graph.getNodeAccess().getLongitude(iter.getAdjNode())+" distance:"+iter.getDistance()+" speed:"+speed+" time:"+timeOnEdge);
+            }
+     
+            	
+            
+            
+            
+            
             processEdge(goalEdge.edge, goalEdge.adjNode);
             goalEdge = goalEdge.parent;
         }
@@ -206,8 +235,15 @@ public class Path
         EdgeIteratorState iter = graph.getEdgeProps(edgeId, adjNode);
         double dist = iter.getDistance();
         distance += dist;
-        millis += calcMillis(dist, iter.getFlags(), false);
+        double timeOnEdge=calcMillis(dist, iter.getFlags(), false);
+        millis += timeOnEdge;
         addEdge(edgeId);
+        
+        double speed=encoder.getSpeed(iter.getFlags());
+        
+        if (logger.isDebugEnabled())
+        	logger.debug(graph.getNodeAccess().getLatitude(iter.getBaseNode())+","+graph.getNodeAccess().getLongitude(iter.getBaseNode())+" --> "+graph.getNodeAccess().getLatitude(iter.getAdjNode())+","+graph.getNodeAccess().getLongitude(iter.getAdjNode())+" distance:"+iter.getDistance()+" speed:"+speed+" time:"+timeOnEdge);
+
     }
 
     /**

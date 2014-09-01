@@ -25,8 +25,10 @@ import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.storage.*;
+
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
+
 import java.util.*;
 
 /**
@@ -316,10 +318,15 @@ public class GHUtility
     {
         GraphStorage store;
         boolean is3D = g.getNodeAccess().is3D();
-        if (g instanceof LevelGraphStorage)
-            store = new LevelGraphStorage(outdir, encodingManager, is3D);
+        ExtendedStorage  extendedStorage;
+        if (encodingManager.needsTurnCostsSupport())
+            extendedStorage=new TurnCostStorage();
         else
-            store = new GraphHopperStorage(outdir, encodingManager, is3D);
+            extendedStorage=new ExtendedStorage.NoExtendedStorage();
+        if (g instanceof LevelGraphStorage)
+            store = new LevelGraphStorage(outdir, encodingManager, is3D,extendedStorage);
+        else
+            store = new GraphHopperStorage(outdir, encodingManager, is3D,extendedStorage);
 
         return store;
     }
@@ -482,6 +489,22 @@ public class GHUtility
         public EdgeSkipIterState setWeight( double weight )
         {
             throw new UnsupportedOperationException("Not supported. Edge is empty.");
+        }
+
+		@Override
+        public int getFromOriginalEdge() {
+			 throw new UnsupportedOperationException("Not supported. Edge is empty.");
+        }
+
+		@Override
+        public int getToOriginalEdge() {
+			 throw new UnsupportedOperationException("Not supported. Edge is empty.");
+        }
+
+		@Override
+        public void setOriginalEdges(int edge1, int edge2) {
+			 throw new UnsupportedOperationException("Not supported. Edge is empty.");
+	        
         }
     };
 

@@ -17,7 +17,11 @@
  */
 package com.graphhopper.routing;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.graphhopper.routing.util.FlagEncoder;
+import com.graphhopper.routing.util.TurnWeighting;
 import com.graphhopper.storage.EdgeEntry;
 import com.graphhopper.storage.Graph;
 import com.graphhopper.util.EdgeIterator;
@@ -30,9 +34,12 @@ import com.graphhopper.util.GHUtility;
  */
 public class PathBidirRef extends Path
 {
+    private final static Logger logger = LoggerFactory.getLogger(PathBidirRef.class);
+       
     protected EdgeEntry edgeTo;
     private boolean switchWrapper = false;
-
+   
+    
     public PathBidirRef( Graph g, FlagEncoder encoder )
     {
         super(g, encoder);
@@ -82,6 +89,7 @@ public class PathBidirRef extends Path
         EdgeEntry currEdge = edgeEntry;
         while (EdgeIterator.Edge.isValid(currEdge.edge))
         {
+            if (logger.isDebugEnabled()) logger.debug("rev path "+currEdge.adjNode+" edgeId:"+currEdge.edge+" spawnAt:"+currEdge.spawnAt+" evaluatedAt:"+currEdge.evaluatedAt);
             processEdge(currEdge.edge, currEdge.adjNode);
             currEdge = currEdge.parent;
         }
@@ -91,6 +99,7 @@ public class PathBidirRef extends Path
         int tmpEdge = currEdge.edge;
         while (EdgeIterator.Edge.isValid(tmpEdge))
         {
+            if (logger.isDebugEnabled()) logger.debug("path node:"+currEdge.adjNode+" edgeId:"+currEdge.edge+" spawnAt:"+currEdge.spawnAt+" evaluatedAt:"+currEdge.evaluatedAt);
             currEdge = currEdge.parent;
             processEdge(tmpEdge, currEdge.adjNode);
             tmpEdge = currEdge.edge;

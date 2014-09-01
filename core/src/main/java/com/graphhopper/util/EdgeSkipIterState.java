@@ -34,4 +34,11 @@ public interface EdgeSkipIterState extends EdgeIteratorState
     EdgeSkipIterState setWeight( double weight );
 
     double getWeight();
+    
+    
+    int getFromOriginalEdge();
+
+    int getToOriginalEdge();
+
+    void setOriginalEdges( int edge1, int edge2 );
 }

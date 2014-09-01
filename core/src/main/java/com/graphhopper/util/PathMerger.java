@@ -48,6 +48,7 @@ public class PathMerger
         for (int pathIndex = 0; pathIndex < paths.size(); pathIndex++)
         {
             Path path = paths.get(pathIndex);
+            System.err.println("w:"+path.getWeight()+" t:"+path.getMillis());
             fullMillis += path.getMillis();
             fullDistance += path.getDistance();
             if (enableInstructions)

@@ -38,6 +38,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * A class which is used to query the underlying graph with real GPS points. It does so by
  * introducing virtual nodes and edges. It is lightweight in order to be created every time a new
@@ -47,6 +50,8 @@ import java.util.List;
  */
 public class QueryGraph implements Graph
 {
+	private final Logger logger = LoggerFactory.getLogger(QueryGraph.class);
+	
     private final Graph mainGraph;
     private final NodeAccess mainNodeAccess;
     private final int mainNodes;
@@ -222,6 +227,11 @@ public class QueryGraph implements Graph
                 return true;
             }
         });
+        if (logger.isDebugEnabled()){
+        	for(EdgeIteratorState edgeIteratorState:virtualEdges){
+        		logger.debug("edgeId:"+edgeIteratorState.getAdjNode()+" "+edgeIteratorState.getBaseNode()+" --> "+edgeIteratorState.getAdjNode());
+        	}
+        }
     }
 
     @Override
@@ -570,11 +580,11 @@ public class QueryGraph implements Graph
         return new UnsupportedOperationException("QueryGraph cannot be modified.");
     }
 
-    static class VirtualEdgeIterator implements EdgeIterator, EdgeSkipIterState
+    public static class VirtualEdgeIterator implements EdgeIterator, EdgeSkipIterState
     {
 
-        private final List<EdgeIteratorState> edges;
-        private int current;
+        public final List<EdgeIteratorState> edges;
+        public int current;
 
         public VirtualEdgeIterator( int edgeCount )
         {
@@ -741,12 +751,28 @@ public class QueryGraph implements Graph
         {
             throw new UnsupportedOperationException("Not supported.");
         }
+
+		@Override
+        public int getFromOriginalEdge() {
+			  throw new UnsupportedOperationException("Not supported.");
+        }
+
+		@Override
+        public int getToOriginalEdge() {
+			  throw new UnsupportedOperationException("Not supported.");
+        }
+
+		@Override
+        public void setOriginalEdges(int edge1, int edge2) {
+			  throw new UnsupportedOperationException("Not supported.");
+	        
+        }
     }
 
     /**
      * Creates an edge state decoupled from a graph where nodes, pointList, etc are kept in memory.
      */
-    private static class VirtualEdgeIState implements EdgeIteratorState, EdgeSkipIterState
+    public static class VirtualEdgeIState implements EdgeIteratorState, EdgeSkipIterState
     {
         private final PointList pointList;
         private final int edgeId;
@@ -921,6 +947,22 @@ public class QueryGraph implements Graph
         public double getWeight()
         {
             throw new UnsupportedOperationException("Not supported.");
+        }
+
+		@Override
+        public int getFromOriginalEdge() {
+			  throw new UnsupportedOperationException("Not supported.");
+        }
+
+		@Override
+        public int getToOriginalEdge() {
+			  throw new UnsupportedOperationException("Not supported.");
+        }
+
+		@Override
+        public void setOriginalEdges(int edge1, int edge2) {
+			  throw new UnsupportedOperationException("Not supported.");
+	        
         }
     }
 }
