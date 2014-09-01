@@ -74,7 +74,7 @@ public class PrepareContractionHierarchiesTest
         LevelGraph g = createExampleGraph();
         double normalDist = new Dijkstra(g, carEncoder, weighting, tMode).calcPath(4, 2).getDistance();
         DijkstraOneToMany algo = new DijkstraOneToMany(g, carEncoder, weighting, tMode);
-        PrepareContractionHierarchies prepare = new PrepareContractionHierarchies(carEncoder, weighting);
+        PrepareContractionHierarchies prepare = new PrepareContractionHierarchies(carEncoder, weighting, tMode);
         prepare.setGraph(g).initFromGraph().prepareNodes();
         algo.setEdgeFilter(new PrepareContractionHierarchies.IgnoreNodeFilter(g, g.getNodes() + 1).setAvoidNode(3));
         int nodeEntry = algo.setLimitWeight(100).findEndNode(4, 2);
@@ -92,7 +92,7 @@ public class PrepareContractionHierarchiesTest
         double normalDist = new Dijkstra(g, carEncoder, weighting, tMode).calcPath(4, 2).getDistance();
         assertEquals(3, normalDist, 1e-5);
         DijkstraOneToMany algo = new DijkstraOneToMany(g, carEncoder, weighting, tMode);
-        PrepareContractionHierarchies prepare = new PrepareContractionHierarchies(carEncoder, weighting);
+        PrepareContractionHierarchies prepare = new PrepareContractionHierarchies(carEncoder, weighting, tMode);
         prepare.setGraph(g).initFromGraph().prepareNodes();
         algo.setEdgeFilter(new PrepareContractionHierarchies.IgnoreNodeFilter(g, g.getNodes() + 1).setAvoidNode(3));
         int nodeEntry = algo.setLimitWeight(10).findEndNode(4, 2);
