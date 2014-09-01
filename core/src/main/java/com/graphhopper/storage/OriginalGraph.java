@@ -32,7 +32,7 @@ import com.graphhopper.util.shapes.BBox;
  */
 public class OriginalGraph implements Graph
 {
-    private final Graph lg;
+    private final LevelGraph lg;
 
     public OriginalGraph( LevelGraph lg )
     {
