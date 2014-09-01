@@ -35,14 +35,13 @@ public class NodesShouldHaveStillAtLeastOneEdgeTest {
    protected GraphStorage createNamestiMiruGraph(GraphStorage g)
    {
    	
-   	FlagEncoder encoder=new CarFlagEncoder(5, 5, 1);
    	
        
 
        g.edge(0, 1,2,true);
        g.edge(1, 2,2,true);
        g.edge(1, 6,2,true);
-       g.edge(2, 3).setFlags(encoder.setProperties(10, true,false));
+       g.edge(2, 3).setFlags(g.getEncodingManager().getSingle().setProperties(10, true,false));
        g.edge(3, 4,2,true);
        g.edge(4, 5,2,true);
        g.edge(5, 2,2,true);
