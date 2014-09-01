@@ -20,11 +20,11 @@ package com.graphhopper.storage.index;
 import com.graphhopper.coll.GHBitSet;
 import com.graphhopper.coll.GHTBitSet;
 import com.graphhopper.geohash.SpatialKeyAlgo;
-import com.graphhopper.routing.util.AllEdgesIterator;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.storage.DataAccess;
 import com.graphhopper.storage.Directory;
 import com.graphhopper.storage.Graph;
+import com.graphhopper.storage.LevelGraph;
 import com.graphhopper.storage.NodeAccess;
 import com.graphhopper.util.*;
 import com.graphhopper.util.shapes.BBox;
@@ -74,8 +74,15 @@ public class LocationIndexTree implements LocationIndex
      */
     private double equalNormedDelta;
 
+    /**
+     * @param g the graph for which this index should do the lookup based on latitude,longitude.
+     * @param dir
+     */
     public LocationIndexTree( Graph g, Directory dir )
     {
+        if (g instanceof LevelGraph)
+            throw new IllegalArgumentException("Use LevelGraph.getOriginalGraph instead of the graph itself");
+
         MAGIC_INT = Integer.MAX_VALUE / 22316;
         this.graph = g;
         this.nodeAccess = g.getNodeAccess();
@@ -306,8 +313,14 @@ public class LocationIndexTree implements LocationIndex
 
         // compact & store to dataAccess
         dataAccess.create(64 * 1024);
-        int lastPointer = inMem.store(inMem.root, START_POINTER);
-        flush();
+        try
+        {
+            inMem.store(inMem.root, START_POINTER);
+            flush();
+        } catch (Exception ex)
+        {
+            throw new IllegalStateException("Problem while storing location index. " + Helper.getMemInfo(), ex);
+        }
         float entriesPerLeaf = (float) inMem.size / inMem.leafs;
         initialized = true;
         logger.info("location index created in " + sw.stop().getSeconds()
@@ -365,7 +378,7 @@ public class LocationIndexTree implements LocationIndex
 
         void prepare()
         {
-            final EdgeIterator allIter = getAllEdges();
+            final EdgeIterator allIter = graph.getAllEdges();
             try
             {
                 while (allIter.next())
@@ -392,7 +405,6 @@ public class LocationIndexTree implements LocationIndex
                 }
             } catch (Exception ex)
             {
-//                logger.error("Problem!", ex);
                 logger.error("Problem! base:" + allIter.getBaseNode() + ", adj:" + allIter.getAdjNode()
                         + ", edge:" + allIter.getEdge(), ex);
             }
@@ -410,7 +422,7 @@ public class LocationIndexTree implements LocationIndex
                     long key = keyAlgo.encode(lat, lon);
                     long keyPart = createReverseKey(key);
                     // no need to feed both nodes as we search neighbors in fillIDs
-                    addNode(root, pickBestNode(nodeA, nodeB), 0, keyPart, key);
+                    addNode(root, nodeA, 0, keyPart, key);
                 }
             };
             BresenhamLine.calcPoints(lat1, lon1, lat2, lon2, pointEmitter,
@@ -779,7 +791,7 @@ public class LocationIndexTree implements LocationIndex
         // clone storedIds to avoid interference with forEach
         final GHBitSet checkBitset = new GHTBitSet(new TIntHashSet(storedNetworkEntryIds));
         // find nodes from the network entries which are close to 'point'
-        final EdgeExplorer explorer = graph.createEdgeExplorer(getEdgeFilter());
+        final EdgeExplorer explorer = graph.createEdgeExplorer();
         storedNetworkEntryIds.forEach(new TIntProcedure()
         {
             @Override
@@ -927,23 +939,6 @@ public class LocationIndexTree implements LocationIndex
         protected abstract boolean check( int node, double normedDist, int wayIndex, EdgeIteratorState iter, QueryResult.Position pos );
     }
 
-    protected int pickBestNode( int nodeA, int nodeB )
-    {
-        // For normal graph the node does not matter because if nodeA is conntected to nodeB
-        // then nodeB is also connect to nodeA, but for a LevelGraph this does not apply.
-        return nodeA;
-    }
-
-    protected EdgeFilter getEdgeFilter()
-    {
-        return EdgeFilter.ALL_EDGES;
-    }
-
-    protected AllEdgesIterator getAllEdges()
-    {
-        return graph.getAllEdges();
-    }
-
     // make entries static as otherwise we get an additional reference to this class (memory waste)
     static interface InMemEntry
     {
@@ -952,12 +947,12 @@ public class LocationIndexTree implements LocationIndex
 
     static class InMemLeafEntry extends SortedIntSet implements InMemEntry
     {
-        private long key;
+        // private long key;
 
         public InMemLeafEntry( int count, long key )
         {
             super(count);
-            this.key = key;
+            // this.key = key;
         }
 
         public boolean addNode( int nodeId )
@@ -974,7 +969,7 @@ public class LocationIndexTree implements LocationIndex
         @Override
         public String toString()
         {
-            return "LEAF " + key + " " + super.toString();
+            return "LEAF " + /*key +*/ " " + super.toString();
         }
 
         TIntArrayList getResults()

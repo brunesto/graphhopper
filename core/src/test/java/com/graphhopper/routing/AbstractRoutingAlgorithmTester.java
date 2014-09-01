@@ -21,7 +21,6 @@ import com.graphhopper.routing.util.*;
 import com.graphhopper.storage.*;
 import com.graphhopper.storage.index.LocationIndex;
 import com.graphhopper.storage.index.LocationIndexTree;
-import com.graphhopper.storage.index.LocationIndexTreeSC;
 import com.graphhopper.storage.index.QueryResult;
 import com.graphhopper.util.*;
 import gnu.trove.list.TIntList;
@@ -555,12 +554,7 @@ public abstract class AbstractRoutingAlgorithmTester
 
     Path calcPathViaQuery( String weighting, Graph graph, double fromLat, double fromLon, double toLat, double toLon )
     {
-        LocationIndex index;
-        if (graph instanceof LevelGraph)
-            index = new LocationIndexTreeSC((LevelGraph) graph, new RAMDirectory());
-        else
-            index = new LocationIndexTree(graph, new RAMDirectory());
-
+        LocationIndex index = new LocationIndexTree(graph.getOriginalGraph(), new RAMDirectory());
         index.prepareIndex();
         QueryResult from = index.findClosest(fromLat, fromLon, EdgeFilter.ALL_EDGES);
         QueryResult to = index.findClosest(toLat, toLon, EdgeFilter.ALL_EDGES);

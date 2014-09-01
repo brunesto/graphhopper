@@ -132,6 +132,11 @@ public class DijkstraOneToManyTest extends AbstractRoutingAlgorithmTester
         g.edge(5, 6, 1, true);
         g.edge(6, 4, 1, true);
 
+        
+        g.edge(4, 5, 1, true);
+        g.edge(5, 6, 1, true);
+        g.edge(6, 4, 1, true);
+        
         AlgorithmPreparation prep = prepareGraph(g);
         DijkstraOneToMany algo = (DijkstraOneToMany) prep.createAlgo();
         assertEquals(-1, algo.findEndNode(0, 4));

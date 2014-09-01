@@ -37,7 +37,7 @@ public class PreparationWeighting implements Weighting
     }
 
     @Override
-    public double getMinWeight( double distance )
+    public final double getMinWeight( double distance )
     {
         return userWeighting.getMinWeight(distance);
     }
@@ -53,16 +53,12 @@ public class PreparationWeighting implements Weighting
                 return tmp.getWeight();
         }
         return userWeighting.calcWeight(edgeState, reverse, prevOrNextEdgeId);
+
     }
 
     @Override
     public String toString()
     {
         return "PREPARE+" + userWeighting.toString();
-    }
-
-    Weighting getUserWeighting()
-    {
-        return userWeighting;
     }
 }
