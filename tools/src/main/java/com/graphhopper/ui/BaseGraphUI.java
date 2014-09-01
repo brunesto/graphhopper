@@ -9,6 +9,8 @@ import java.util.Random;
 import com.graphhopper.coll.GHBitSet;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.storage.Graph;
+import com.graphhopper.storage.GraphStorage;
+import com.graphhopper.storage.LevelGraph;
 import com.graphhopper.storage.NodeAccess;
 import com.graphhopper.util.EdgeExplorer;
 import com.graphhopper.util.EdgeIterator;
@@ -16,14 +18,14 @@ import com.graphhopper.util.shapes.BBox;
 
 public class BaseGraphUI {
 
-protected Graph graph;
+protected GraphStorage graph;
 
 protected  NodeAccess na;
 protected ZoomLevelGraphicsWrapper mg;
 Random rand;
 HeadlessTilesLayer mapsforgeLayer;
 
-	 public BaseGraphUI(Graph graph){
+	 public BaseGraphUI(GraphStorage graph){
 		 this.graph=graph;
 		 this.na = graph.getNodeAccess();
 		 
@@ -36,7 +38,7 @@ HeadlessTilesLayer mapsforgeLayer;
 	        
 		  rand = new Random();
 		  //mapsforgeLayer=new MapsforgeLayer("/home/bc/Downloads/czech_republic.map");
-		  mapsforgeLayer=new HeadlessTilesLayer("http://a.tile.openstreetmap.org", "/tmp/tiles");
+		  mapsforgeLayer=new HeadlessTilesLayer("http://otile1.mqcdn.com/tiles/1.0.0/map", "/tmp/tiles");
 		  
 	 }
 	 
@@ -101,10 +103,19 @@ HeadlessTilesLayer mapsforgeLayer;
              }
          }
 	 }
+	 public String getEdgeLabel( EdgeIterator iter ){
+		 return ""+iter.getEdge()+" "+graph.getEncodingManager().getSingle().getSpeed(iter.getFlags())+"km/h";
+		 
+	 }
 	 
 	 public void phase2(BBox b, Graphics2D g2){
 		 int locs=graph.getNodes();
 		 EdgeExplorer explorer = graph.createEdgeExplorer(EdgeFilter.ALL_EDGES);
+		 
+		 LevelGraph levelGraph=null;
+		 if(graph instanceof LevelGraph)
+			 levelGraph=(LevelGraph)graph;
+		 
          for (int nodeIndex = 0; nodeIndex < locs; nodeIndex++)
          {
              double lat = na.getLatitude(nodeIndex);
@@ -115,8 +126,15 @@ HeadlessTilesLayer mapsforgeLayer;
                  continue;
 
              EdgeIterator iter = explorer.setBaseNode(nodeIndex);
+             while(iter.next()) { // if (iter.getAdjNode()>nodeIndex){
+            	 double adjLat=na.getLatitude(iter.getAdjNode());
+            	 double adjLon=na.getLongitude(iter.getAdjNode());
+            	 mg.plotText(g2, (lat+adjLat)/2,(lon+adjLon)/2,getEdgeLabel(iter),Color.BLACK,Color.LIGHT_GRAY,true);
+             }
       
-                 mg.plotText(g2, lat,lon,""+nodeIndex);
+//             if (levelGraph!=null)
+//             int level=levelGraph.getLevel(nodeIndex);
+                 mg.plotText(g2, lat,lon,""+nodeIndex,Color.RED,Color.LIGHT_GRAY,true);
          }
 	 }
 	    
@@ -137,4 +155,12 @@ HeadlessTilesLayer mapsforgeLayer;
 		        e.printStackTrace();
 	        }
     }
+	 public void moveTo(double centerLat,double centerLon){
+		 moveTo(centerLat, centerLon,mg.getZoomLevel());
+	 }
+	 public void moveTo(double centerLat,double centerLon,int zoomLevel){
+		 mg.setCenterCoords(centerLat, centerLon);
+		 mg.zoom(zoomLevel);
+	 }
+	 
 }

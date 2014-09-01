@@ -88,11 +88,11 @@ public abstract class BaseTilesController {
 			
 			if (!stopDrawing){
 				Graphics g=image.getGraphics();
-				int x=tileId.x*256-centerX+halfWidth;
-				int y=tileId.y*256-centerY+halfHeight;
+				long x=tileId.x*256-centerX+halfWidth;
+				long y=tileId.y*256-centerY+halfHeight;
 				if (logger.isDebugEnabled())
 					logger.debug("tileId:"+tileId+"drawing tile at "+x+","+y);
-				g.drawImage(tileImage,x,y,null);
+				g.drawImage(tileImage,(int)x,(int)y,null);
 				g.dispose();
 				drawn++;
 			}

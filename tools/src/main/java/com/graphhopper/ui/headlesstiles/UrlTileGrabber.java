@@ -15,6 +15,9 @@ public abstract class UrlTileGrabber implements ITileGrabber {
     int requestCnt;
     int failedCnt;
     
+    int maxZoomLevel;
+    
+    
 	public abstract String getTileUrl(TileId tile);
 	
 	@Override

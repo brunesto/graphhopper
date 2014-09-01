@@ -60,7 +60,10 @@ public class MiniGraphUI extends BaseGraphUI
     public static void main( String[] strs ) throws Exception
     {
         CmdArgs args = CmdArgs.read(strs);
-        GraphHopper hopper = new GraphHopper().init(args).importOrLoad();
+        GraphHopper hopper = new GraphHopper();
+        hopper.setEncodingManager(new EncodingManager(new CarFlagEncoder(5,5,1)));
+        hopper.init(args);       
+        hopper.importOrLoad();
         boolean debug = args.getBool("minigraphui.debug", false);
         new MiniGraphUI(hopper, debug).visualize();
     }
@@ -101,7 +104,7 @@ public class MiniGraphUI extends BaseGraphUI
         encoder = hopper.getEncodingManager().getSingle();
         weighting = hopper.createWeighting("fastest", encoder); //new PriorityWeighting(encoder);
         if (prepare == null)
-            prepare = NoOpAlgorithmPreparation.createAlgoPrepare(graph, "dijkstrabi", encoder, weighting, TraversalMode.NODE_BASED);
+            prepare = NoOpAlgorithmPreparation.createAlgoPrepare(graph, "dijkstrabi", encoder, weighting,TraversalMode.EDGE_BASED_2DIR);
 
         logger.info("locations:" + graph.getNodes() + ", debug:" + debug + ", algo:" + prepare.createAlgo().getName());
       
@@ -302,6 +305,141 @@ public class MiniGraphUI extends BaseGraphUI
     private QueryResult fromRes;
     private QueryResult toRes;
 
+    protected JFrame  initFrame(){
+    	int frameHeight = 800;
+        int frameWidth = 1200;
+        JFrame frame = new JFrame("GraphHopper UI - Small&Ugly ;)");
+        frame.setLayout(new BorderLayout());
+        frame.add(mainPanel, BorderLayout.CENTER);
+        frame.add(infoPanel, BorderLayout.NORTH);
+
+        infoPanel.setPreferredSize(new Dimension(300, 100));
+        
+
+        // scale
+        mainPanel.addMouseWheelListener(new MouseWheelListener()
+        {
+            @Override
+            public void mouseWheelMoved( MouseWheelEvent e )
+            {
+                mg.scale(e.getX(), e.getY(), e.getWheelRotation() < 0);
+                repaintRoads();
+            }
+        });
+
+        // listener to investigate findID behavior
+//        MouseAdapter ml = new MouseAdapter() {
+//
+//            @Override public void mouseClicked(MouseEvent e) {
+//                findIDLat = mg.getLat(e.getY());
+//                findIDLon = mg.getLon(e.getX());
+//                findIdLayer.repaint();
+//                mainPanel.repaint();
+//            }
+//
+//            @Override public void mouseMoved(MouseEvent e) {
+//                updateLatLon(e);
+//            }
+//
+//            @Override public void mousePressed(MouseEvent e) {
+//                updateLatLon(e);
+//            }
+//        };
+        MouseAdapter ml = new MouseAdapter()
+        {
+            // for routing:
+            double fromLat, fromLon;
+            boolean fromDone = false;
+
+            @Override
+            public void mouseClicked( MouseEvent e )
+            {
+                if (!fromDone)
+                {
+                    fromLat = mg.getLat(e.getY());
+                    fromLon = mg.getLon(e.getX());
+                } else
+                {
+                    double toLat = mg.getLat(e.getY());
+                    double toLon = mg.getLon(e.getX());
+                    StopWatch sw = new StopWatch().start();
+                    logger.info("start searching from " + fromLat + "," + fromLon
+                            + " to " + toLat + "," + toLon);
+                    // get from and to node id
+                    fromRes = index.findClosest(fromLat, fromLon, EdgeFilter.ALL_EDGES);
+                    toRes = index.findClosest(toLat, toLon, EdgeFilter.ALL_EDGES);
+                    logger.info("found ids " + fromRes + " -> " + toRes + " in " + sw.stop().getSeconds() + "s");
+
+                    repaintPaths();
+                }
+
+                fromDone = !fromDone;
+            }
+            boolean dragging = false;
+
+            @Override
+            public void mouseDragged( MouseEvent e )
+            {
+                dragging = true;
+                fastPaint = true;
+                update(e);
+                updateLatLon(e);
+            }
+
+            @Override
+            public void mouseReleased( MouseEvent e )
+            {
+                if (dragging)
+                {
+                    // update only if mouse release comes from dragging! (at the moment equal to fastPaint)
+                    dragging = false;
+                    fastPaint = false;
+                    update(e);
+                }
+            }
+
+            public void update( MouseEvent e )
+            {
+                mg.setNewOffset(e.getX() - currentPosX, e.getY() - currentPosY);
+                repaintRoads();
+            }
+
+            @Override
+            public void mouseMoved( MouseEvent e )
+            {
+                updateLatLon(e);
+            }
+
+            @Override
+            public void mousePressed( MouseEvent e )
+            {
+                updateLatLon(e);
+            }
+        };
+        mainPanel.addMouseListener(ml);
+        mainPanel.addMouseMotionListener(ml);
+
+        // just for fun
+//        mainPanel.getInputMap().put(KeyStroke.getKeyStroke("DELETE"), "removedNodes");
+//        mainPanel.getActionMap().put("removedNodes", new AbstractAction() {
+//            @Override public void actionPerformed(ActionEvent e) {
+//                int counter = 0;
+//                for (CoordTrig<Long> coord : quadTreeNodes) {
+//                    int ret = quadTree.remove(coord.lat, coord.lon);
+//                    if (ret < 1) {
+////                        logger.info("cannot remove " + coord + " " + ret);
+////                        ret = quadTree.remove(coord.getLatitude(), coord.getLongitude());
+//                    } else
+//                        counter += ret;
+//                }
+//                logger.info("Removed " + counter + " of " + quadTreeNodes.size() + " nodes");
+//            }
+//        });
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(frameWidth + 10, frameHeight + 30);
+        frame.setVisible(true);
+        return frame;
+    }
     public void visualize()
     {
         try
@@ -311,138 +449,7 @@ public class MiniGraphUI extends BaseGraphUI
                 @Override
                 public void run()
                 {
-                    int frameHeight = 800;
-                    int frameWidth = 1200;
-                    JFrame frame = new JFrame("GraphHopper UI - Small&Ugly ;)");
-                    frame.setLayout(new BorderLayout());
-                    frame.add(mainPanel, BorderLayout.CENTER);
-                    frame.add(infoPanel, BorderLayout.NORTH);
-
-                    infoPanel.setPreferredSize(new Dimension(300, 100));
-                    
-
-                    // scale
-                    mainPanel.addMouseWheelListener(new MouseWheelListener()
-                    {
-                        @Override
-                        public void mouseWheelMoved( MouseWheelEvent e )
-                        {
-                            mg.scale(e.getX(), e.getY(), e.getWheelRotation() < 0);
-                            repaintRoads();
-                        }
-                    });
-
-                    // listener to investigate findID behavior
-//                    MouseAdapter ml = new MouseAdapter() {
-//
-//                        @Override public void mouseClicked(MouseEvent e) {
-//                            findIDLat = mg.getLat(e.getY());
-//                            findIDLon = mg.getLon(e.getX());
-//                            findIdLayer.repaint();
-//                            mainPanel.repaint();
-//                        }
-//
-//                        @Override public void mouseMoved(MouseEvent e) {
-//                            updateLatLon(e);
-//                        }
-//
-//                        @Override public void mousePressed(MouseEvent e) {
-//                            updateLatLon(e);
-//                        }
-//                    };
-                    MouseAdapter ml = new MouseAdapter()
-                    {
-                        // for routing:
-                        double fromLat, fromLon;
-                        boolean fromDone = false;
-
-                        @Override
-                        public void mouseClicked( MouseEvent e )
-                        {
-                            if (!fromDone)
-                            {
-                                fromLat = mg.getLat(e.getY());
-                                fromLon = mg.getLon(e.getX());
-                            } else
-                            {
-                                double toLat = mg.getLat(e.getY());
-                                double toLon = mg.getLon(e.getX());
-                                StopWatch sw = new StopWatch().start();
-                                logger.info("start searching from " + fromLat + "," + fromLon
-                                        + " to " + toLat + "," + toLon);
-                                // get from and to node id
-                                fromRes = index.findClosest(fromLat, fromLon, EdgeFilter.ALL_EDGES);
-                                toRes = index.findClosest(toLat, toLon, EdgeFilter.ALL_EDGES);
-                                logger.info("found ids " + fromRes + " -> " + toRes + " in " + sw.stop().getSeconds() + "s");
-
-                                repaintPaths();
-                            }
-
-                            fromDone = !fromDone;
-                        }
-                        boolean dragging = false;
-
-                        @Override
-                        public void mouseDragged( MouseEvent e )
-                        {
-                            dragging = true;
-                            fastPaint = true;
-                            update(e);
-                            updateLatLon(e);
-                        }
-
-                        @Override
-                        public void mouseReleased( MouseEvent e )
-                        {
-                            if (dragging)
-                            {
-                                // update only if mouse release comes from dragging! (at the moment equal to fastPaint)
-                                dragging = false;
-                                fastPaint = false;
-                                update(e);
-                            }
-                        }
-
-                        public void update( MouseEvent e )
-                        {
-                            mg.setNewOffset(e.getX() - currentPosX, e.getY() - currentPosY);
-                            repaintRoads();
-                        }
-
-                        @Override
-                        public void mouseMoved( MouseEvent e )
-                        {
-                            updateLatLon(e);
-                        }
-
-                        @Override
-                        public void mousePressed( MouseEvent e )
-                        {
-                            updateLatLon(e);
-                        }
-                    };
-                    mainPanel.addMouseListener(ml);
-                    mainPanel.addMouseMotionListener(ml);
-
-                    // just for fun
-//                    mainPanel.getInputMap().put(KeyStroke.getKeyStroke("DELETE"), "removedNodes");
-//                    mainPanel.getActionMap().put("removedNodes", new AbstractAction() {
-//                        @Override public void actionPerformed(ActionEvent e) {
-//                            int counter = 0;
-//                            for (CoordTrig<Long> coord : quadTreeNodes) {
-//                                int ret = quadTree.remove(coord.lat, coord.lon);
-//                                if (ret < 1) {
-////                                    logger.info("cannot remove " + coord + " " + ret);
-////                                    ret = quadTree.remove(coord.getLatitude(), coord.getLongitude());
-//                                } else
-//                                    counter += ret;
-//                            }
-//                            logger.info("Removed " + counter + " of " + quadTreeNodes.size() + " nodes");
-//                        }
-//                    });
-                    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-                    frame.setSize(frameWidth + 10, frameHeight + 30);
-                    frame.setVisible(true);
+                    initFrame();
                 }
             });
         } catch (Exception ex)
@@ -454,6 +461,7 @@ public class MiniGraphUI extends BaseGraphUI
     int currentPosX;
     int currentPosY;
 
+    
     void updateLatLon( MouseEvent e )
     {
         latLon = mg.getLat(e.getY()) + "," + mg.getLon(e.getX());
@@ -478,5 +486,10 @@ public class MiniGraphUI extends BaseGraphUI
         mainPanel.repaint();
         infoPanel.repaint();
         logger.info("roads painting took " + sw.stop().getSeconds() + " sec");
+    }
+    
+    public void moveTo(double centerLat,double centerLon,int zoomLevel){
+    	super.moveTo(centerLat, centerLon, zoomLevel);
+    	repaintRoads();
     }
 }

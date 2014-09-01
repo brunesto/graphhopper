@@ -70,18 +70,20 @@ public class ZoomLevelGraphicsWrapper
     	return "zoomLevel:"+zoomLevel+" center:"+CoordinatesHelper.tilePixY2lat(centerYPix,zoomLevel)+","+CoordinatesHelper.tilePixX2lon(centerXPix,zoomLevel)+","+") x:"+centerXPix+" y:"+centerYPix+")";
     }
 
-
-    
-    public void plotText( Graphics2D g2, double lat, double lon, String text )
+    public void plotText( Graphics2D g2, double lat, double lon, String text){
+    	plotText(g2, lat, lon, text,Color.BLACK,Color.LIGHT_GRAY,true);
+    }
+    public void plotText( Graphics2D g2, double lat, double lon, String text,Color fg,Color bg,boolean frame)
     {
     	int width=g2.getFontMetrics().charsWidth(text.toCharArray(), 0, text.length());
     	int x=(int)getX(lon);
     	int y=(int)getY(lat);
     	
-    	g2.setColor(Color.LIGHT_GRAY);
+    	g2.setColor(bg);
     	g2.fillRect(x,y-10, width+10, 20);
-    	g2.setColor(Color.BLACK);
-    	g2.drawRect(x,y-10, width+10, 20);
+    	g2.setColor(fg);
+    	if (frame)
+    		g2.drawRect(x,y-10, width+10, 20);
         g2.drawString(text, x+ 5,y + 5);
     }
 
@@ -154,20 +156,27 @@ public class ZoomLevelGraphicsWrapper
     	
     	
     }
-    void scale( int x, int y, boolean zoomIn )
-    {
-    	
-    	
+    
+    public void zoom(int 	newZoomLevel){
+    	if (newZoomLevel<2) return;
     	double centerLat=CoordinatesHelper.tilePixY2lat(getOffsetYPix()+viewPortHeight/2,zoomLevel);
     	double centerLon=CoordinatesHelper.tilePixX2lon(getOffsetXPix()+viewPortWidth/2,zoomLevel);
     	
     	
-    	if (zoomIn)
-    		zoomLevel++;
-    	else
-    		zoomLevel--;
+    	zoomLevel=newZoomLevel;
     		
     	setCenterCoords(centerLat, centerLon);
+    	
+    }
+    void scale( int x, int y, boolean zoomIn )
+    {
+    	
+    	if (zoomIn) {
+    		zoom(zoomLevel+1);
+    	}
+    	else {
+    		zoom(zoomLevel-1);
+    	}
     			
     	
 //        double tmpFactor = 0.5f;

@@ -23,18 +23,19 @@ public class DebugTileGrabber implements ITileGrabber {
 		
 		Thread.sleep((long)(new Random().nextDouble()*delay));
 		
-		BufferedImage bufferedImage;
-		if (next==null) 
-			bufferedImage=new BufferedImage(256, 256, BufferedImage.TYPE_INT_RGB);
-		else{	 
+		BufferedImage bufferedImage=null;
+		Graphics g=null;
+		if (next!=null) 
 			bufferedImage=next.getImage(tileId);
-			
-		}
-		Graphics g=bufferedImage.getGraphics();
-		if (next==null) {
+		if (bufferedImage==null){
+			bufferedImage=new BufferedImage(256, 256, BufferedImage.TYPE_INT_RGB);
+			g=bufferedImage.getGraphics();
 			g.setColor(Color.GRAY);
 			g.fillRect(0, 0, 255, 255);
-		}
+			g.dispose();
+		} else
+			g=bufferedImage.getGraphics();
+		
 		g.setColor(Color.RED);
 		g.drawRect(0, 0, 255, 255);
 		g.drawString(tileId.zoom+"/"+tileId.x+"/"+tileId.y, 5, 20);

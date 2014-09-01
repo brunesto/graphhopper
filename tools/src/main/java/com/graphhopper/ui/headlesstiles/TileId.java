@@ -2,7 +2,7 @@ package com.graphhopper.ui.headlesstiles;
 
 public class TileId implements Comparable<TileId>{
 
-	public TileId(int zoom, int x, int y) {
+	public TileId(int zoom, long x, long y) {
 	    super();
 	    this.zoom = zoom;
 	    this.x = x;
@@ -13,16 +13,16 @@ public class TileId implements Comparable<TileId>{
     public String toString() {
 	    return  zoom + "/" + x + "/" + y ;
     }
-	int x;
-	int y;
+	long x;
+	long y;
 	@Override
     public int hashCode() {
-	    final int prime = 31;
-	    int result = 1;
+	    final long prime = 31;
+	    long result = 1;
 	    result = prime * result + x;
 	    result = prime * result + y;
 	    result = prime * result + zoom;
-	    return result;
+	    return (int)result;
     }
 	@Override
     public boolean equals(Object obj) {
@@ -46,10 +46,10 @@ public class TileId implements Comparable<TileId>{
 	    int zoomCmp=Integer.compare(this.zoom, that.zoom );
 	    if (zoomCmp!=0)
 	    	return zoomCmp;
-	    int xCmp=Integer.compare(this.x, that.x );
+	    int xCmp=Long.compare(this.x, that.x );
 	    if (xCmp!=0)
 	    	return xCmp;
-	    int yCmp=Integer.compare(this.y, that.y );
+	    int yCmp=Long.compare(this.y, that.y );
 	    return yCmp;
 	    
     }
