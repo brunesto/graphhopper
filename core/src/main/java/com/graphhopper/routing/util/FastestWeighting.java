@@ -31,7 +31,7 @@ public class FastestWeighting implements Weighting
      * Converting to seconds is not necessary but makes adding other penalities easier (e.g. turn
      * costs or traffic light costs etc)
      */
-    protected final static double SPEED_CONV = 3.6;
+    protected final static double SPEED_CONV = 1/3.6;
     protected final FlagEncoder encoder;
     private final double maxSpeed;
 

@@ -277,6 +277,7 @@ public class LevelGraphStorage extends GraphHopperStorage implements LevelGraph
      */
     public void disconnect( EdgeSkipExplorer explorer, EdgeIteratorState edgeState )
     {
+    	if (logger.isDebugEnabled()) logger.debug("disconnect edgeId:"+edgeState.getEdge()+"  "+edgeState.getBaseNode()+" --> "+edgeState.getAdjNode());
         // search edge with opposite direction        
         // EdgeIteratorState tmpIter = getEdgeProps(iter.getEdge(), iter.getBaseNode());
         EdgeSkipIterator tmpIter = explorer.setBaseNode(edgeState.getAdjNode());
@@ -286,7 +287,7 @@ public class LevelGraphStorage extends GraphHopperStorage implements LevelGraph
         {
             // If we disconnect shortcuts only we could run normal algos on the graph too
             // BUT CH queries will be 10-20% slower and preparation will be 10% slower
-            if (tmpIter.isShortcut() && tmpIter.getEdge() == edgeState.getEdge())
+            if (/*tmpIter.isShortcut() &&*/ tmpIter.getEdge() == edgeState.getEdge())
             {
                 found = true;
                 break;

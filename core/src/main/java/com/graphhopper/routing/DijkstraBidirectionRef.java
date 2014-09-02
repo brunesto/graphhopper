@@ -184,6 +184,20 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
     
     int evaluationCnt=0;
     
+    void dumpEdgesFrom(int baseNode){
+    	EdgeExplorer explorer=graph.createEdgeExplorer();
+    	
+        {
+        	if (logger.isDebugEnabled()) logger.debug("===============");
+        	if (logger.isDebugEnabled()) logger.debug("  baseNode:"+baseNode);
+        	EdgeIterator iter = explorer.setBaseNode(baseNode);
+        	while (iter.next()){
+        		if (logger.isDebugEnabled()) logger.debug("  adjNode:"+iter.getAdjNode());
+        	}
+        	if (logger.isDebugEnabled()) logger.debug("===============");
+        }
+    }
+    
     void fillEdges( EdgeEntry currEdge, PriorityQueue<EdgeEntry> prioQueue,
             TIntObjectMap<EdgeEntry> shortestWeightMap, EdgeExplorer explorer, boolean reverse )
     {
@@ -191,7 +205,9 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
     	currEdge.evaluatedAt=evaluationCnt;
     	
         int currNode = currEdge.adjNode;
-        if (logger.isDebugEnabled()) logger.debug("currEdge:"+(currEdge.parent!=null?currEdge.parent.adjNode:"")+" --> "+currEdge.adjNode+" edgeId:"+currEdge.edge);
+        if (logger.isDebugEnabled()) logger.debug("currEdge"+" edgeId:"+currEdge.edge+" "+(currEdge.parent!=null?currEdge.parent.adjNode:"?")+" --> "+currEdge.adjNode+" reverse:"+reverse);
+        
+        dumpEdgesFrom(currNode);
         
         
         EdgeIterator iter = explorer.setBaseNode(currNode);

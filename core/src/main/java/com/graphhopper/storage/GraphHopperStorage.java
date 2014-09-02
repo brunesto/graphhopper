@@ -17,6 +17,9 @@
  */
 package com.graphhopper.storage;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.graphhopper.coll.GHBitSet;
 import com.graphhopper.coll.GHBitSetImpl;
 import com.graphhopper.coll.SparseIntIntArray;
@@ -25,7 +28,9 @@ import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.search.NameIndex;
 import com.graphhopper.util.*;
+
 import static com.graphhopper.util.Helper.nf;
+
 import com.graphhopper.util.shapes.BBox;
 
 /**
@@ -45,6 +50,9 @@ import com.graphhopper.util.shapes.BBox;
  */
 public class GraphHopperStorage implements GraphStorage
 {
+	private final static Logger logger = LoggerFactory.getLogger(GraphHopperStorage.class);
+
+	
     private static final int NO_NODE = -1;
     // Emergency stop. to detect if something went wrong with our storage system and to prevent us from an infinit loop.
     // Road networks typically do not have nodes with plenty of edges!
@@ -1136,12 +1144,17 @@ public class GraphHopperStorage implements GraphStorage
      */
     long internalEdgeDisconnect( int edgeToRemove, long edgeToUpdatePointer, int baseNode, int adjNode )
     {
+    	if (logger.isDebugEnabled()) logger.debug("internalEdgeDisconnect( edgeToRemove:"+edgeToRemove+", edgeToUpdatePointer:"+edgeToUpdatePointer+",  baseNode:"+baseNode+", adjNode:"+adjNode+" )");
+    	if (logger.isDebugEnabled()) logger.debug("edgeToUpdate:"+edgeToUpdatePointer/edgeEntryBytes);
         long edgeToRemovePointer = (long) edgeToRemove * edgeEntryBytes;
         // an edge is shared across the two nodes even if the edge is not in both directions
         // so we need to know two edge-pointers pointing to the edge before edgeToRemovePointer
         int nextEdgeId = edges.getInt(getLinkPosInEdgeArea(baseNode, adjNode, edgeToRemovePointer));
         if (edgeToUpdatePointer < 0)
         {
+        	int prevValue=nodes.getInt((long) baseNode * nodeEntryBytes);
+        	if (prevValue!=edgeToRemove)
+        		throw new RuntimeException();
             nodes.setInt((long) baseNode * nodeEntryBytes, nextEdgeId);
         } else
         {
@@ -1165,6 +1178,7 @@ public class GraphHopperStorage implements GraphStorage
      */
     private void inPlaceNodeRemove( int removeNodeCount )
     {
+    	if (logger.isDebugEnabled()) logger.debug("inPlaceNodeRemove(count:"+removeNodeCount+")");
         // Prepare edge-update of nodes which are connected to deleted nodes        
         int toMoveNode = getNodes();
         int itemsToMove = 0;
@@ -1180,6 +1194,7 @@ public class GraphHopperStorage implements GraphStorage
                 removeNode >= 0;
                 removeNode = removedNodes.next(removeNode + 1))
         {
+        	if (logger.isDebugEnabled()) logger.debug("removeNode:"+removeNode);
             EdgeIterator delEdgesIter = delExplorer.setBaseNode(removeNode);
             while (delEdgesIter.next())
             {
