@@ -767,7 +767,7 @@ public class GraphHopperStorage implements GraphStorage
         }
 
         @Override
-        public final boolean next()
+        public boolean next()
         {
             int i = 0;
             boolean foundNext = false;

@@ -53,7 +53,7 @@ public class QueryGraph implements Graph
 {
 	private final Logger logger = LoggerFactory.getLogger(QueryGraph.class);
 	
-    private final Graph mainGraph;
+    public final Graph mainGraph;
     private final NodeAccess mainNodeAccess;
     private final int mainNodes;
     private final int mainEdges;

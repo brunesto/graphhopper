@@ -31,6 +31,8 @@ import com.graphhopper.storage.index.*;
 import com.graphhopper.util.*;
 import com.graphhopper.util.shapes.GHPoint;
 
+import gnu.trove.list.TIntList;
+
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -872,7 +874,14 @@ public class GraphHopper implements GraphHopperAPI
         }
 
         FlagEncoder encoder = encodingManager.getEncoder(vehicle);
-        EdgeFilter edgeFilter = new DefaultEdgeFilter(encoder);
+        EdgeFilter edgeFilter;
+//        if (graph instanceof LevelGraphStorage ){
+//        	LevelGraphStorage levelGraphStorage=(LevelGraphStorage)graph;
+//        	edgeFilter=levelGraphStorage.EDGES_CH_NAVIGABLE;
+//        }
+//        else
+        	edgeFilter=new DefaultEdgeFilter(encoder);
+        		
         GHPoint startPoint = points.get(0);
         StopWatch sw = new StopWatch().start();
         QueryResult fromRes = locationIndex.findClosest(startPoint.lat, startPoint.lon, edgeFilter);
@@ -927,6 +936,10 @@ public class GraphHopper implements GraphHopperAPI
             sw = new StopWatch().start();
 
             Path path = algo.calcPath(fromRes, toRes);
+            TIntList nodes=path.calcNodes();
+            for(int i=0;i<nodes.size();i++)
+            	logger.info(""+nodes.get(i));
+            
             if (path.getMillis() < 0)
                 throw new RuntimeException("Time was negative. Please report as bug and include:" + request);
 

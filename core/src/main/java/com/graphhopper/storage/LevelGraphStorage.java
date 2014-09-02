@@ -51,7 +51,8 @@ public class LevelGraphStorage extends GraphHopperStorage implements LevelGraph
     private int I_LEVEL;
     private int I_LOWER_NODE_ORIGINAL_EDGE; // will store the original edgeId which is closest to the node with lower id
     private int I_HIGHER_NODE_ORIGINAL_EDGE;  // will store the original edgeId which is closest to the node with higher id
-    
+    private int I_CH_NAVIGABLE_FORWARD;
+    private int I_CH_NAVIGABLE_BACKWARD;
     
     // after the last edge only shortcuts are stored
     public int lastEdgeIndex = -1;
@@ -76,6 +77,8 @@ public class LevelGraphStorage extends GraphHopperStorage implements LevelGraph
         I_LOWER_NODE_ORIGINAL_EDGE = nextEdgeEntryIndex(4);
         I_HIGHER_NODE_ORIGINAL_EDGE = nextEdgeEntryIndex(4);
         I_LEVEL = nextNodeEntryIndex(4);
+        I_CH_NAVIGABLE_FORWARD= nextEdgeEntryIndex(4); // TODO use 1 byte for both
+        I_CH_NAVIGABLE_BACKWARD= nextEdgeEntryIndex(4); // TODO use byte
         initNodeAndEdgeEntrySize();
     }
 
@@ -93,6 +96,29 @@ public class LevelGraphStorage extends GraphHopperStorage implements LevelGraph
         return nodes.getInt((long) index * nodeEntryBytes + I_LEVEL);
     }
 
+    
+    public void setChNavigable( int index, int fromNode,int toNode,boolean navigable )
+    {
+        boolean forward=fromNode<toNode;
+        
+        edges.setInt((long) index * edgeEntryBytes + (forward?I_CH_NAVIGABLE_FORWARD:I_CH_NAVIGABLE_BACKWARD),navigable?1:0);
+        if (logger.isDebugEnabled()) logger.debug("setChNavigable("+index+" fromNode:"+fromNode+" toNode:"+toNode+" navigable:"+navigable+")");
+    }
+
+
+    public final boolean getChNavigable( int index, int fromNode,int toNode )
+    {
+        if (index>=edgeCount)
+        	return true;
+    	boolean forward=fromNode<toNode;
+    	
+        boolean retVal=0!=edges.getInt((long) index * edgeEntryBytes + (forward?I_CH_NAVIGABLE_FORWARD:I_CH_NAVIGABLE_BACKWARD));
+        if (logger.isDebugEnabled()) logger.debug("getChNavigableFromFlags("+index+" fromNode:"+fromNode+" toNode:"+toNode+") returns "+retVal+"");
+        return retVal;
+    }
+    
+    
+    
     @Override
     public EdgeSkipIterState shortcut( int a, int b )
     {
@@ -119,6 +145,8 @@ public class LevelGraphStorage extends GraphHopperStorage implements LevelGraph
         iter.next();
         iter.setSkippedEdges(EdgeIterator.NO_EDGE, EdgeIterator.NO_EDGE);
         iter.setOriginalEdges(EdgeIterator.NO_EDGE, EdgeIterator.NO_EDGE);
+        setChNavigable(edgeId, a, b, true);
+//        setChNavigable(edgeId, b, a, true);
         return iter;
     }
 
@@ -149,6 +177,16 @@ public class LevelGraphStorage extends GraphHopperStorage implements LevelGraph
 
     public class EdgeSkipIteratorImpl extends EdgeIterable implements EdgeSkipExplorer, EdgeSkipIterator
     {
+    	
+//    	@Override
+//		  public boolean next(){
+//				do{
+//					if (!super.next())
+//						return false;
+//				} while(!getChNavigable(getEdge(), getBaseNode(), getAdjNode()));
+//				return true;
+//		  }
+          
         public EdgeSkipIteratorImpl( EdgeFilter filter )
         {
             super(filter);
@@ -278,6 +316,9 @@ public class LevelGraphStorage extends GraphHopperStorage implements LevelGraph
     public void disconnect( EdgeSkipExplorer explorer, EdgeIteratorState edgeState )
     {
     	if (logger.isDebugEnabled()) logger.debug("disconnect edgeId:"+edgeState.getEdge()+"  "+edgeState.getBaseNode()+" --> "+edgeState.getAdjNode());
+    	
+    	
+    	
         // search edge with opposite direction        
         // EdgeIteratorState tmpIter = getEdgeProps(iter.getEdge(), iter.getBaseNode());
         EdgeSkipIterator tmpIter = explorer.setBaseNode(edgeState.getAdjNode());
@@ -295,8 +336,10 @@ public class LevelGraphStorage extends GraphHopperStorage implements LevelGraph
 
             tmpPrevEdge = tmpIter.getEdge();
         }
-        if (found)
-            internalEdgeDisconnect(edgeState.getEdge(), (long) tmpPrevEdge * edgeEntryBytes, edgeState.getAdjNode(), edgeState.getBaseNode());
+        if (found){
+        	setChNavigable(edgeState.getEdge(), edgeState.getAdjNode(), edgeState.getBaseNode(), false);
+//            internalEdgeDisconnect(edgeState.getEdge(), (long) tmpPrevEdge * edgeEntryBytes, edgeState.getAdjNode(), edgeState.getBaseNode());
+        }
     }
 
     @Override
@@ -482,4 +525,13 @@ public class LevelGraphStorage extends GraphHopperStorage implements LevelGraph
         edges.setHeader(next * 4, lastEdgeIndex);
         return next + 1;
     }
+    
+    public EdgeFilter EDGES_CH_NAVIGABLE = new EdgeFilter()
+    {
+        @Override
+        public boolean accept( EdgeIteratorState edgeIterState )
+        {
+            return getChNavigable(edgeIterState.getEdge(), edgeIterState.getBaseNode(), edgeIterState.getAdjNode());
+        }
+    };
 }

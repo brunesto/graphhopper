@@ -31,6 +31,7 @@ import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.util.Weighting;
 import com.graphhopper.storage.EdgeEntry;
 import com.graphhopper.storage.Graph;
+import com.graphhopper.storage.LevelGraphStorage;
 import com.graphhopper.util.EdgeExplorer;
 import com.graphhopper.util.EdgeIterator;
 import com.graphhopper.util.EdgeIteratorState;
@@ -185,6 +186,11 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
     int evaluationCnt=0;
     
     void dumpEdgesFrom(int baseNode){
+    	
+    	LevelGraphStorage levelGraphStorage=null;
+    	if (graph instanceof QueryGraph)
+    		if (((QueryGraph)graph).mainGraph instanceof LevelGraphStorage)
+    			levelGraphStorage=(LevelGraphStorage)((QueryGraph)graph).mainGraph;
     	EdgeExplorer explorer=graph.createEdgeExplorer();
     	
         {
@@ -193,6 +199,8 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
         	EdgeIterator iter = explorer.setBaseNode(baseNode);
         	while (iter.next()){
         		if (logger.isDebugEnabled()) logger.debug("  adjNode:"+iter.getAdjNode());
+        		if (levelGraphStorage!=null)
+        			if (logger.isDebugEnabled()) logger.debug(" chNavigable:"+levelGraphStorage.getChNavigable(iter.getEdge(),iter.getBaseNode(), iter.getAdjNode()));
         	}
         	if (logger.isDebugEnabled()) logger.debug("===============");
         }
@@ -204,14 +212,24 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
     	if (logger.isDebugEnabled()) logger.debug("\n\n\n\nevaluation:"+evaluationCnt);
     	currEdge.evaluatedAt=evaluationCnt;
     	
+    	int currBaseNode=currEdge.parent!=null?currEdge.parent.adjNode:-1;
         int currNode = currEdge.adjNode;
         if (logger.isDebugEnabled()) logger.debug("currEdge"+" edgeId:"+currEdge.edge+" "+(currEdge.parent!=null?currEdge.parent.adjNode:"?")+" --> "+currEdge.adjNode+" reverse:"+reverse);
         
+      
+        LevelGraphStorage levelGraphStorage=null;
+    	if (graph instanceof QueryGraph)
+    		if (((QueryGraph)graph).mainGraph instanceof LevelGraphStorage)
+    			levelGraphStorage=(LevelGraphStorage)((QueryGraph)graph).mainGraph;
+    	if (levelGraphStorage!=null && currBaseNode!=-1)
+  			if (logger.isDebugEnabled()) logger.debug(" chNavigable:"+levelGraphStorage.getChNavigable(currEdge.edge,currBaseNode, currEdge.adjNode));
+    
         dumpEdgesFrom(currNode);
         
         
         EdgeIterator iter = explorer.setBaseNode(currNode);
         
+    	    
         
 //        int originalEnteringEdgeId=PrepareContractionHierarchies.getOriginal(graph,currEdge.edge, currEdge.adjNode, false);
 //        if (logger.isDebugEnabled()) logger.debug("originalEnteringEdgeId:"+originalEnteringEdgeId);
@@ -241,31 +259,60 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
             if (Double.isInfinite(tmpWeight))
                 continue;
 
-            EdgeEntry ee = shortestWeightMap.get(iterationKey);
-            if (ee == null)
-            {
-                ee = new EdgeEntry(iter.getEdge(), iter.getAdjNode(), tmpWeight);
-                ee.spawnAt=evaluationCnt;
-                ee.parent = currEdge;
-                shortestWeightMap.put(iterationKey, ee);
-                prioQueue.add(ee);
-            } else if (ee.weight > tmpWeight)
-            {
-                prioQueue.remove(ee);
-                ee.edge = iter.getEdge();
-                ee.weight = tmpWeight;
-                ee.parent = currEdge;
-                prioQueue.add(ee);
-            } else
-                continue;
+            EdgeEntry ee=enQueue(currEdge, prioQueue, shortestWeightMap, iter, iterationKey, tmpWeight); 
+            
 
-            if (updateBestPath)
+            if (ee!=null && updateBestPath)
                 updateBestPath(iter, ee, iterationKey);
         }
 //        logger.info("evaluation:"+evaluationCnt);
         evaluationCnt++;
     }
 
+	private EdgeEntry enQueue(EdgeEntry currEdge, PriorityQueue<EdgeEntry> prioQueue, TIntObjectMap<EdgeEntry> shortestWeightMap, EdgeIterator iter, int iterationKey, double tmpWeight) {
+		
+		boolean add=true;
+//		  LevelGraphStorage levelGraphStorage=null;
+//	    	if (graph instanceof QueryGraph)
+//	    		if (((QueryGraph)graph).mainGraph instanceof LevelGraphStorage) {
+//	    			levelGraphStorage=(LevelGraphStorage)((QueryGraph)graph).mainGraph;
+//					// now accept a node only if its parent node was CH navigable
+//	    			try {
+//					int prevBaseNode=graph.getEdgeProps(currEdge.edge, iter.getBaseNode()).getBaseNode();
+//	    			add=levelGraphStorage.getChNavigable(currEdge.edge, prevBaseNode,iter.getBaseNode());
+//	    			} catch (Exception e) {
+//	    				// ignore edge is virtual
+//	    			}
+//	    			
+//	    		}
+
+		
+	    EdgeEntry ee = shortestWeightMap.get(iterationKey);
+	    if (ee == null)
+	    {
+	        ee = new EdgeEntry(iter.getEdge(), iter.getAdjNode(), tmpWeight);
+	        ee.spawnAt=evaluationCnt;
+	        ee.parent = currEdge;
+	        shortestWeightMap.put(iterationKey, ee);
+	        if(add)
+	        	prioQueue.add(ee);
+	        return ee;
+	    } else if (ee.weight > tmpWeight)
+	    {
+	        prioQueue.remove(ee);
+	        ee.edge = iter.getEdge();
+	        ee.weight = tmpWeight;
+	        ee.parent = currEdge;
+	        if (add)
+	        	prioQueue.add(ee);
+	        return ee;
+	    }
+	    
+	    return null;
+    }
+
+    
+    
     @Override
     protected void updateBestPath( EdgeIteratorState edgeState, EdgeEntry entryCurrent, int iterationKey )
     {

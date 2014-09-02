@@ -853,6 +853,22 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
             {
                 return getName() + "|" + prepareWeighting;
             }
+            
+            @Override
+            protected boolean accept( EdgeIterator iter, int prevOrNextEdgeId )
+            {   
+            	return  super.accept(iter, prevOrNextEdgeId);
+//            	if (!super.accept(iter, prevOrNextEdgeId))
+//            		return false;
+//            	if (prevOrNextEdgeId==EdgeIterator.NO_EDGE)
+//            		return true;
+//
+//            	// now accept a node only if its parent node was CH navigable
+//            	LevelGraphStorage levelGraphStorage=(LevelGraphStorage)PrepareContractionHierarchies.this.g;
+//            	int prevBaseNode=graph.getEdgeProps(prevOrNextEdgeId, iter.getBaseNode()).getBaseNode();
+//            	boolean retVal=levelGraphStorage.getChNavigable(prevOrNextEdgeId, prevBaseNode,iter.getBaseNode());
+//            	return retVal;
+            }
         };
 
         if (!removesHigher2LowerEdges)
