@@ -137,6 +137,11 @@ public class Path
 
         reverseOrder = false;
         edgeIds.reverse();
+        if (logger.isDebugEnabled()){
+	        for(int i=0;i<edgeIds.size();i++){
+	        	logger.debug("@"+i+" "+edgeIds.get(i));
+	        }
+        }
     }
 
     /**
@@ -283,13 +288,32 @@ public class Path
     {
         int tmpNode = getFromNode();
         int len = edgeIds.size();
+        int prevTmpNode=tmpNode;
+        
+        
+        
+        
         for (int i = 0; i < len; i++)
         {
+        	if (logger.isDebugEnabled()) logger.debug("@"+i);
+            EdgeIteratorState edgeBase = graph.getEdgeProps(edgeIds.get(i), Integer.MIN_VALUE);
+            logger.debug("edgeId:"+edgeBase.getEdge()+" "+edgeBase.getBaseNode()+" --> "+edgeBase.getAdjNode());
+        }
+        
+        
+        
+        
+        
+        for (int i = 0; i < len; i++)
+        {
+        	if (logger.isDebugEnabled()) logger.debug("@"+i+" tmpNode:"+tmpNode+" edgeId:"+edgeIds.get(i));
             EdgeIteratorState edgeBase = graph.getEdgeProps(edgeIds.get(i), tmpNode);
-            if (edgeBase == null)
-                throw new IllegalStateException("Edge " + edgeIds.get(i) + " was empty when requested with node " + tmpNode
-                        + ", array index:" + i + ", edges:" + edgeIds.size());
-
+            if (edgeBase == null){
+            	 edgeBase = graph.getEdgeProps(edgeIds.get(i), prevTmpNode);
+            	 if (edgeBase == null) throw new IllegalStateException("Edge " + edgeIds.get(i) + " was empty when requested with node " + tmpNode
+                        + ", array index:" + i + ", edges:" + edgeIds.size()+" valid edge:"+ graph.getEdgeProps(edgeIds.get(i), Integer.MIN_VALUE));
+            }
+            prevTmpNode=tmpNode;
             tmpNode = edgeBase.getBaseNode();
             // later: more efficient swap
             edgeBase = graph.getEdgeProps(edgeBase.getEdge(), tmpNode);

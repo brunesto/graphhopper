@@ -75,8 +75,8 @@ public class PathBidirRef extends Path
 
 //        int from = GHUtility.getAdjNode(graph, edgeEntry.edge, );
 //        int to = GHUtility.getAdjNode(graph, edgeTo.edge, );
-        if (edgeEntry.adjNode != edgeTo.adjNode)
-            throw new IllegalStateException("Locations of the 'to'- and 'from'-Edge has to be the same." + toString() + ", fromEntry:" + edgeEntry + ", toEntry:" + edgeTo);
+//        if (edgeEntry.adjNode != edgeTo.adjNode)
+//            throw new IllegalStateException("Locations of the 'to'- and 'from'-Edge has to be the same." + toString() + ", fromEntry:" + edgeEntry + ", toEntry:" + edgeTo);
 
         extractSW.start();
         if (switchWrapper)
@@ -95,13 +95,14 @@ public class PathBidirRef extends Path
         }
         setFromNode(currEdge.adjNode);
         reverseOrder();
-        currEdge = edgeTo;
-        int tmpEdge = currEdge.edge;
+        currEdge = edgeTo.parent;
+        int tmpEdge = edgeTo.parent.edge;
         while (EdgeIterator.Edge.isValid(tmpEdge))
         {
             if (logger.isDebugEnabled()) logger.debug("path node:"+currEdge.adjNode+" edgeId:"+currEdge.edge+" spawnAt:"+currEdge.spawnAt+" evaluatedAt:"+currEdge.evaluatedAt);
-            currEdge = currEdge.parent;
-            processEdge(tmpEdge, currEdge.adjNode);
+            
+            processEdge(tmpEdge, currEdge.adjNode); 	// these 2 lines were inverted?
+            currEdge = currEdge.parent; 				//
             tmpEdge = currEdge.edge;
         }
         setEndNode(currEdge.adjNode);

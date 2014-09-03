@@ -186,10 +186,13 @@ public class TurnCostStorage implements ExtendedStorage
         {
             if (turnCostIndex == NO_TURN_ENTRY)
                 break;
-            long turnCostPtr = (long) turnCostIndex * turnCostsEntryBytes;            
-            if (edgeFrom == turnCosts.getInt(turnCostPtr + TC_FROM))
+            long turnCostPtr = (long) turnCostIndex * turnCostsEntryBytes;
+            int forbiddenFrom=turnCosts.getInt(turnCostPtr + TC_FROM);
+            int forbiddenTo=turnCosts.getInt(turnCostPtr + TC_TO);
+            if (edgeFrom == forbiddenFrom)
             {                
-                if (edgeTo == turnCosts.getInt(turnCostPtr + TC_TO))
+            	
+                if (edgeTo == forbiddenTo)
                     return turnCosts.getInt(turnCostPtr + TC_FLAGS);
             }
 

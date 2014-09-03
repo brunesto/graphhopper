@@ -647,12 +647,12 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
                 // toNode <- outgoingEdges.adjNode
                 // fromNode <-incomingEdges.adjNode
                 if (fromNodeHasLowerNodeId){
-                	originalEdgeIdForLowerNodeIdSide=getOriginalEdgeIdClosestToAdjNode(incomingEdges);
-                	originalEdgeIdForHigherNodeIdSide=getOriginalEdgeIdClosestToAdjNode(outgoingEdges);	
+                	originalEdgeIdForLowerNodeIdSide=getOriginalEdgeIdClosestToAdjNode(g,incomingEdges);
+                	originalEdgeIdForHigherNodeIdSide=getOriginalEdgeIdClosestToAdjNode(g,outgoingEdges);	
                 			
                 } else {
-                	originalEdgeIdForLowerNodeIdSide=getOriginalEdgeIdClosestToAdjNode(outgoingEdges);
-                	originalEdgeIdForHigherNodeIdSide=getOriginalEdgeIdClosestToAdjNode(incomingEdges);
+                	originalEdgeIdForLowerNodeIdSide=getOriginalEdgeIdClosestToAdjNode(g,outgoingEdges);
+                	originalEdgeIdForHigherNodeIdSide=getOriginalEdgeIdClosestToAdjNode(g,incomingEdges);
                 }
          	   
                 
@@ -828,8 +828,8 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
 
 //                return false;
 //                // changed also the final finish condition for CH         ?????       
-                boolean finished=//bestPath.getWeight()<Double.MAX_VALUE;
-                		currFrom.weight >=  bestPath.getWeight() && currTo.weight >=  bestPath.getWeight();
+                boolean finished=bestPath.getWeight()<Double.MAX_VALUE;
+//                		currFrom.weight >=  bestPath.getWeight() && currTo.weight >=  bestPath.getWeight();
                 if (finished)
                 	logger.debug("finished!");
                 return finished;
@@ -1038,16 +1038,16 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
     	} catch (IllegalStateException ise) {
     		return edgeId;
     	}
-    	return getOriginalEdgeIdClosestToAdjNode(iter);
+    	return getOriginalEdgeIdClosestToAdjNode(graphStorage,iter);
     	
     }
-    public static int  getOriginalEdgeIdClosestToAdjNode(EdgeIteratorState iter){
-    	return getOriginalEdgeIdClosestTo(iter,true);
+    public static int  getOriginalEdgeIdClosestToAdjNode(Graph graphStorage,EdgeIteratorState iter){
+    	return getOriginalEdgeIdClosestTo(graphStorage,iter,true);
     }
-    public static int  getOriginalEdgeIdClosestToBaseNode(EdgeIteratorState iter){
-    	return getOriginalEdgeIdClosestTo(iter,false);
+    public static int  getOriginalEdgeIdClosestToBaseNode(Graph graphStorage,EdgeIteratorState iter){
+    	return getOriginalEdgeIdClosestTo(graphStorage,iter,false);
     }
-    public static int  getOriginalEdgeIdClosestTo(EdgeIteratorState iter,boolean toAdjNode){
+    public static int  getOriginalEdgeIdClosestTo(Graph graphStorage,EdgeIteratorState iter,boolean toAdjNode){
     	
     	// a VirtualEdgeIterator can contain both  EdgeSkipIterStates and VirtualEdgeIStates,
     	// so this little hack is to handle the former case
@@ -1072,20 +1072,28 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
 	    	
 	 	    int originalEdgeIdFromLowerNodeId=edge.getFromOriginalEdge();
 	 	   
+	 	    
 	        if (originalEdgeIdFromLowerNodeId==EdgeIterator.NO_EDGE)
 	     	   return edge.getEdge();
 	        else {
 	     	   int originalEdgeIdFromHigherNodeId=edge.getToOriginalEdge();
 	     	   boolean adjNodeHasHigherNodeId=(edge.getAdjNode()>edge.getBaseNode());
 	     	  
+	     	   int retVal;
 	     	   if (adjNodeHasHigherNodeId==toAdjNode)
 	     		   // forwardEdge and we want the adjNode or !forwardEdge and we want the baseNode
-		       	   return originalEdgeIdFromHigherNodeId;
+	     		  retVal= originalEdgeIdFromHigherNodeId;
 		       else
 	     		   // !forwardEdge and we want the adjNode or forwardEdge and we want the baseNode
-		           return originalEdgeIdFromLowerNodeId;
+		    	   retVal= originalEdgeIdFromLowerNodeId;
 	     	  
-	        
+	     	   boolean failEarly=null==graphStorage.getEdgeProps(retVal, toAdjNode?edge.getAdjNode():edge.getBaseNode());
+	     	   if (failEarly){
+	     		   logger.error(""+graphStorage.getEdgeProps(retVal,Integer.MIN_VALUE));
+	     		   throw new IllegalStateException("yay!!!!");
+	     	   }
+	     	   
+	     	   return retVal;
 	        }
     	} else {
     		// a normal edge

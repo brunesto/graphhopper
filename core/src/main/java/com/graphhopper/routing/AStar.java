@@ -17,8 +17,8 @@
  */
 package com.graphhopper.routing;
 
-import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.map.TLongObjectMap;
+import gnu.trove.map.hash.TLongObjectHashMap;
 
 import java.util.PriorityQueue;
 
@@ -45,7 +45,7 @@ public class AStar extends AbstractRoutingAlgorithm
 {
     private DistanceCalc dist;
     private int visitedCount;
-    private TIntObjectMap<AStarEdge> fromMap;
+    private TLongObjectMap<AStarEdge> fromMap;
     private PriorityQueue<AStarEdge> prioQueueOpenSet;
     private AStarEdge currEdge;
     private int to1 = -1;
@@ -74,7 +74,7 @@ public class AStar extends AbstractRoutingAlgorithm
 
     protected void initCollections( int size )
     {
-        fromMap = new TIntObjectHashMap<AStarEdge>();
+        fromMap = new TLongObjectHashMap<AStarEdge>();
         prioQueueOpenSet = new PriorityQueue<AStarEdge>(size);
     }
 
@@ -111,7 +111,7 @@ public class AStar extends AbstractRoutingAlgorithm
                     continue;
 
                 int neighborNode = iter.getAdjNode();
-                int iterationKey = traversalMode.createTraversalId(iter, false);
+                long iterationKey = traversalMode.createTraversalId(graph,iter, false);
                 double alreadyVisitedWeight = weighting.calcWeight(iter, false, currEdge.edge) + currEdge.weightToCompare;
                 if (Double.isInfinite(alreadyVisitedWeight))
                     continue;

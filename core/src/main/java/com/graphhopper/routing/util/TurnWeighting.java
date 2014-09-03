@@ -83,7 +83,12 @@ public class TurnWeighting implements Weighting
             return weight;
         
         int originalEdgeFrom=PrepareContractionHierarchies.getOriginal(graphStorage,prevOrNextEdgeId,edgeState.getBaseNode(), reverse);
-        int originalEdgeTo=PrepareContractionHierarchies.getOriginalEdgeIdClosestToBaseNode(edgeState);
+//        			PrepareContractionHierarchies.getOriginalEdgeIdClosestToAdjNode(edgeState);
+        int originalEdgeTo;
+        if (!reverse)
+        	originalEdgeTo=PrepareContractionHierarchies.getOriginalEdgeIdClosestToAdjNode(graphStorage,edgeState);
+        else
+        	originalEdgeTo=PrepareContractionHierarchies.getOriginalEdgeIdClosestToBaseNode(graphStorage,edgeState);
         int nodeVia=edgeState.getBaseNode();
         
         double turnCosts;

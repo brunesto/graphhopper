@@ -18,6 +18,9 @@
  */
 package com.graphhopper.routing.util;
 
+import com.graphhopper.routing.ch.PrepareContractionHierarchies;
+import com.graphhopper.storage.Graph;
+import com.graphhopper.storage.GraphStorage;
 import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.util.GHUtility;
 
@@ -76,7 +79,10 @@ public enum TraversalMode
      * backward searches in bidirectional algorithms.
      * @return the identifier to access the shortest path tree
      */
-    public final int createTraversalId( EdgeIteratorState iterState, boolean reverse )
+    public final long createTraversalId(Graph g, EdgeIteratorState iterState, boolean reverse ){
+    	return createTraversalIdNew(g,iterState, reverse);
+    }
+    public final int createTraversalIdOriginal( EdgeIteratorState iterState, boolean reverse )
     {
         if (edgeBased)
         {
@@ -84,6 +90,34 @@ public enum TraversalMode
                 return iterState.getEdge();
 
             return GHUtility.createEdgeKey(iterState.getAdjNode(), iterState.getBaseNode(), iterState.getEdge(), reverse);
+        }
+
+        return iterState.getAdjNode();
+    }
+    public final long createTraversalIdNew( Graph g,EdgeIteratorState iterState, boolean reverse )
+{
+        if (edgeBased)
+        {
+            if (noOfStates == 1)
+                return iterState.getEdge();
+
+            if (reverse){
+            	long baseOriginalEdgeId=PrepareContractionHierarchies.getOriginalEdgeIdClosestToBaseNode(g,iterState);
+                long key=baseOriginalEdgeId+(((long)iterState.getBaseNode())<<32);
+	            return key;
+            	
+            }
+            else{
+            	long adjOriginalEdgeId=PrepareContractionHierarchies.getOriginalEdgeIdClosestToAdjNode(g,iterState);
+	            
+//	            if (adjOriginalEdgeId>65535 || iterState.getAdjNode()>65535 ){
+//	            	throw new RuntimeException("hack might failed!");
+//	            }
+	            
+	            // quick hack. TODO retrieve the orientation of the original edge instead of using the node
+	            long key=adjOriginalEdgeId+(((long)iterState.getAdjNode())<<32);
+	            return key;
+            }
         }
 
         return iterState.getAdjNode();

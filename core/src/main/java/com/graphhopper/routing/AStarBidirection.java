@@ -17,8 +17,8 @@
  */
 package com.graphhopper.routing;
 
-import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.map.TLongObjectMap;
+import gnu.trove.map.hash.TLongObjectHashMap;
 
 import java.util.PriorityQueue;
 
@@ -27,7 +27,13 @@ import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.util.Weighting;
 import com.graphhopper.storage.Graph;
-import com.graphhopper.util.*;
+import com.graphhopper.util.DistanceCalc;
+import com.graphhopper.util.DistanceCalcEarth;
+import com.graphhopper.util.DistancePlaneProjection;
+import com.graphhopper.util.EdgeExplorer;
+import com.graphhopper.util.EdgeIterator;
+import com.graphhopper.util.EdgeIteratorState;
+import com.graphhopper.util.GHUtility;
 import com.graphhopper.util.shapes.GHPoint;
 
 /**
@@ -61,10 +67,10 @@ public class AStarBidirection extends AbstractBidirAlgo
 {
     private DistanceCalc dist;
     private PriorityQueue<AStarEdge> prioQueueOpenSetFrom;
-    private TIntObjectMap<AStarEdge> bestWeightMapFrom;
+    private TLongObjectMap<AStarEdge> bestWeightMapFrom;
     private PriorityQueue<AStarEdge> prioQueueOpenSetTo;
-    private TIntObjectMap<AStarEdge> bestWeightMapTo;
-    private TIntObjectMap<AStarEdge> bestWeightMapOther;
+    private TLongObjectMap<AStarEdge> bestWeightMapTo;
+    private TLongObjectMap<AStarEdge> bestWeightMapOther;
     protected AStarEdge currFrom;
     protected AStarEdge currTo;
     protected double approximationFactor;
@@ -85,10 +91,10 @@ public class AStarBidirection extends AbstractBidirAlgo
     protected void initCollections( int size )
     {
         prioQueueOpenSetFrom = new PriorityQueue<AStarEdge>(size / 10);
-        bestWeightMapFrom = new TIntObjectHashMap<AStarEdge>(size / 10);
+        bestWeightMapFrom = new TLongObjectHashMap<AStarEdge>(size / 10);
 
         prioQueueOpenSetTo = new PriorityQueue<AStarEdge>(size / 10);
-        bestWeightMapTo = new TIntObjectHashMap<AStarEdge>(size / 10);
+        bestWeightMapTo = new TLongObjectHashMap<AStarEdge>(size / 10);
     }
 
     /**
@@ -232,7 +238,7 @@ public class AStarBidirection extends AbstractBidirAlgo
 
     private void fillEdges( AStarEdge currEdge, GHPoint goal,
             PriorityQueue<AStarEdge> prioQueueOpenSet,
-            TIntObjectMap<AStarEdge> shortestWeightMap, EdgeExplorer explorer, boolean reverse )
+            TLongObjectMap<AStarEdge> shortestWeightMap, EdgeExplorer explorer, boolean reverse )
     {
 
         int currNode = currEdge.adjNode;
@@ -243,7 +249,7 @@ public class AStarBidirection extends AbstractBidirAlgo
                 continue;
 
             int neighborNode = iter.getAdjNode();
-            int iterationKey = traversalMode.createTraversalId(iter, reverse);
+            long iterationKey = traversalMode.createTraversalId(graph,iter, reverse);
             // TODO performance: check if the node is already existent in the opposite direction
             // then we could avoid the approximation as we already know the exact complete path!
             double alreadyVisitedWeight = weighting.calcWeight(iter, reverse, currEdge.edge) + currEdge.weightToCompare;

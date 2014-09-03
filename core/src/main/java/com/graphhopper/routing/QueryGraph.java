@@ -228,7 +228,7 @@ public class QueryGraph implements Graph
         });
         if (logger.isDebugEnabled()){
         	for(EdgeIteratorState edgeIteratorState:virtualEdges){
-        		logger.debug("edgeId:"+edgeIteratorState.getAdjNode()+" "+edgeIteratorState.getBaseNode()+" --> "+edgeIteratorState.getAdjNode());
+        		logger.debug("edgeId:"+edgeIteratorState.getEdge()+" "+edgeIteratorState.getBaseNode()+" --> "+edgeIteratorState.getAdjNode());
         	}
         }
     }

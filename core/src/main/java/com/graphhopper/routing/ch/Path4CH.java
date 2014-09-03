@@ -45,9 +45,16 @@ public class Path4CH extends PathBidirRef
     @Override
     protected void processEdge( int tmpEdge, int endNode )
     {
+    	logger.debug(""+graph.getEdgeProps(tmpEdge, Integer.MIN_VALUE));
+    	
+    	if (tmpEdge==101650){
+    		logger.info("101650");
+    		}
+    	
     	EdgeSkipIterState mainEdgeState=(EdgeSkipIterState) graph.getEdgeProps(tmpEdge, endNode);
     	if (logger.isDebugEnabled()){
-    		
+    		if (mainEdgeState==null)
+    			throw new NullPointerException("you messed it up! tmpEdge:"+tmpEdge+" endNode:"+endNode);
     		 double dist = mainEdgeState.getDistance();
     		 if (mainEdgeState.isShortcut()){
 	    		 double weight=mainEdgeState.getWeight();
@@ -61,7 +68,7 @@ public class Path4CH extends PathBidirRef
     	
         // Shortcuts do only contain valid weight so first expand before adding
         // to distance and time
-        expandEdge(mainEdgeState, false,0);
+        expandEdge(mainEdgeState, !reverseOrder,0);
     }
 
     private void expandEdge( EdgeSkipIterState mainEdgeState, boolean reverse,int depth4debug )
@@ -76,7 +83,12 @@ public class Path4CH extends PathBidirRef
             double dist = mainEdgeState.getDistance();
             distance += dist;
             long flags = mainEdgeState.getFlags();
-            double timeOnEdge=calcMillis(dist, flags, reverse);
+            double timeOnEdge=0;
+            try {
+            	calcMillis(dist, flags, reverse);
+            } catch (IllegalStateException e){
+            	logger.warn(e.getMessage());
+            }
             millis += timeOnEdge;
             addEdge(mainEdgeState.getEdge());
             

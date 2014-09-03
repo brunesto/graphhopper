@@ -18,14 +18,14 @@
 package com.graphhopper.routing;
 
 import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.map.TLongObjectMap;
+import gnu.trove.map.hash.TLongObjectHashMap;
 
 import java.util.PriorityQueue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.graphhopper.routing.ch.PrepareContractionHierarchies;
 import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.util.Weighting;
@@ -51,9 +51,9 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
 	
     private PriorityQueue<EdgeEntry> openSetFrom;
     private PriorityQueue<EdgeEntry> openSetTo;
-    private TIntObjectMap<EdgeEntry> bestWeightMapFrom;
-    private TIntObjectMap<EdgeEntry> bestWeightMapTo;
-    protected TIntObjectMap<EdgeEntry> bestWeightMapOther;
+    private TLongObjectMap<EdgeEntry> bestWeightMapFrom;
+    private TLongObjectMap<EdgeEntry> bestWeightMapTo;
+    protected TLongObjectMap<EdgeEntry> bestWeightMapOther;
     protected EdgeEntry currFrom;
     protected EdgeEntry currTo;
     protected PathBidirRef bestPath;
@@ -68,10 +68,10 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
     protected void initCollections( int nodes )
     {
         openSetFrom = new PriorityQueue<EdgeEntry>(nodes / 10);
-        bestWeightMapFrom = new TIntObjectHashMap<EdgeEntry>(nodes / 10);
+        bestWeightMapFrom = new TLongObjectHashMap<EdgeEntry>(nodes / 10);
 
         openSetTo = new PriorityQueue<EdgeEntry>(nodes / 10);
-        bestWeightMapTo = new TIntObjectHashMap<EdgeEntry>(nodes / 10);
+        bestWeightMapTo = new TLongObjectHashMap<EdgeEntry>(nodes / 10);
     }
 
     @Override
@@ -207,7 +207,7 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
     }
     
     void fillEdges( EdgeEntry currEdge, PriorityQueue<EdgeEntry> prioQueue,
-            TIntObjectMap<EdgeEntry> shortestWeightMap, EdgeExplorer explorer, boolean reverse )
+            TLongObjectMap<EdgeEntry> shortestWeightMap, EdgeExplorer explorer, boolean reverse )
     {
     	if (logger.isDebugEnabled()) logger.debug("\n\n\n\nevaluation:"+evaluationCnt);
     	currEdge.evaluatedAt=evaluationCnt;
@@ -250,7 +250,7 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
 //            }
             
             
-            int iterationKey = traversalMode.createTraversalId(iter, reverse);
+            long iterationKey = traversalMode.createTraversalId(graph,iter, reverse);
             if (logger.isDebugEnabled()) logger.debug("iterationKey:"+iterationKey+" is for edgeId:"+iter.getEdge()+" "+iter.getBaseNode()+" --> "+iter.getAdjNode()+" reverse:"+reverse);
             
             
@@ -269,7 +269,7 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
         evaluationCnt++;
     }
 
-	private EdgeEntry enQueue(EdgeEntry currEdge, PriorityQueue<EdgeEntry> prioQueue, TIntObjectMap<EdgeEntry> shortestWeightMap, EdgeIterator iter, int iterationKey, double tmpWeight) {
+	private EdgeEntry enQueue(EdgeEntry currEdge, PriorityQueue<EdgeEntry> prioQueue, TLongObjectMap<EdgeEntry> shortestWeightMap, EdgeIterator iter, long iterationKey, double tmpWeight) {
 		
 		boolean add=true;
 //		  LevelGraphStorage levelGraphStorage=null;
@@ -285,7 +285,10 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
 //	    			}
 //	    			
 //	    		}
-
+		if (graph.getEdgeProps(iter.getEdge(),iter.getAdjNode())==null){
+    		throw new RuntimeException("yaya!");
+    	}
+    	
 		
 	    EdgeEntry ee = shortestWeightMap.get(iterationKey);
 	    if (ee == null)
@@ -300,9 +303,13 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
 	    } else if (ee.weight > tmpWeight)
 	    {
 	        prioQueue.remove(ee);
-	        ee.edge = iter.getEdge();
-	        ee.weight = tmpWeight;
+//	        ee.edge = iter.getEdge();
+//	        ee.weight = tmpWeight;
+//	        ee.parent = currEdge;
+	        ee = new EdgeEntry(iter.getEdge(), iter.getAdjNode(), tmpWeight);
+	        ee.spawnAt=evaluationCnt;
 	        ee.parent = currEdge;
+	        shortestWeightMap.put(iterationKey, ee);
 	        if (add)
 	        	prioQueue.add(ee);
 	        return ee;
@@ -314,12 +321,23 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
     
     
     @Override
-    protected void updateBestPath( EdgeIteratorState edgeState, EdgeEntry entryCurrent, int iterationKey )
+    protected void updateBestPath( EdgeIteratorState edgeState, EdgeEntry entryCurrent, long iterationKey )
     {
+    	if (graph.getEdgeProps(entryCurrent.edge, entryCurrent.adjNode)==null){
+    		throw new RuntimeException("yaya!"+entryCurrent);
+    	}
+    	
+    	EdgeEntry entryCurrentOriginal=entryCurrent;
         EdgeEntry entryOther = bestWeightMapOther.get(iterationKey);
+        
+        
+        
+        EdgeEntry entryOtherOriginal=entryOther;
         if (entryOther == null)
             return;
-
+        if (logger.isDebugEnabled())
+        	logger.debug("found match on iterationKey:"+iterationKey);
+        
         boolean reverse = bestWeightMapFrom == bestWeightMapOther;
 
         // update μ
@@ -327,24 +345,42 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
         if (traversalMode.isEdgeBased())
         {
             if (entryOther.edge != entryCurrent.edge)
-                throw new IllegalStateException("cannot happen for edge based execution of " + getName());
+               logger.warn("cannot happen for edge based execution of " + getName());
 
-            if (entryOther.adjNode != entryCurrent.adjNode)
-            {
+//            if (entryOther.adjNode == entryCurrent.adjNode)
+//            {
                 // prevents the path to contain the edge at the meeting point twice and subtract the weight (excluding turn weight => no previous edge)
-                entryCurrent = entryCurrent.parent;
-                newWeight -= weighting.calcWeight(edgeState, reverse, EdgeIterator.NO_EDGE);
-            } else
-            {
-                // we detected a u-turn at meeting point, skip if not supported
-                if (!traversalMode.hasUTurnSupport())
-                    return;
-            }
+//            	if (entryOther.parent.adjNode==entryCurrent.adjNode)
+//            		{entryOther = entryOther.parent;
+            	
+            	// TODO
+            	logger.warn("remove weight!");
+//                newWeight -= weighting.calcWeight(edgeState, reverse, EdgeIterator.NO_EDGE);
+//            		} else 
+//            		{
+//            			entryCurrent=entryCurrent.parent;
+//            			newWeight -= weighting.calcWeight(edgeState, reverse, EdgeIterator.NO_EDGE);
+//            		}
+//                
+                
+//            } else
+//            {
+//                // we detected a u-turn at meeting point, skip if not supported
+//                if (!traversalMode.hasUTurnSupport())
+//                    return;
+//            }
         }
 
 //        logger.info("newWeight:"+newWeight);
         if (newWeight < bestPath.getWeight())
         {
+//        	 if (entryCurrent.adjNode != entryOther.adjNode){
+//        		 entryOther=entryOtherOriginal;
+//        		 entryCurrent=entryCurrentOriginal;
+//        		 
+//                 throw new IllegalStateException("Locations of the 'to'- and 'from'-Edge has to be the same." + toString() + ", fromEntry:" + entryCurrent + ", toEntry:" + entryOther);
+//        	 }
+
             bestPath.setSwitchToFrom(reverse);
             bestPath.setEdgeEntry(entryCurrent);
             bestPath.setWeight(newWeight);
@@ -360,17 +396,17 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
         return "dijkstrabi";
     }
 
-    TIntObjectMap<EdgeEntry> getBestFromMap()
+    TLongObjectMap<EdgeEntry> getBestFromMap()
     {
         return bestWeightMapFrom;
     }
 
-    TIntObjectMap<EdgeEntry> getBestToMap()
+    TLongObjectMap<EdgeEntry> getBestToMap()
     {
         return bestWeightMapTo;
     }
 
-    void setBestOtherMap( TIntObjectMap<EdgeEntry> other )
+    void setBestOtherMap( TLongObjectMap<EdgeEntry> other )
     {
         bestWeightMapOther = other;
     }

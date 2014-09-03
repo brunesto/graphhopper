@@ -17,8 +17,8 @@
  */
 package com.graphhopper.routing;
 
-import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.map.TLongObjectMap;
+import gnu.trove.map.hash.TLongObjectHashMap;
 
 import java.util.PriorityQueue;
 
@@ -45,7 +45,7 @@ public class Dijkstra extends AbstractRoutingAlgorithm
 		
 	protected static final int NOT_FOUND = -1;
 	
-    private TIntObjectMap<EdgeEntry> fromMap;
+    private TLongObjectMap<EdgeEntry> fromMap;
     private PriorityQueue<EdgeEntry> fromHeap;
     private int visitedNodes;
     protected int to = -1;
@@ -62,7 +62,7 @@ public class Dijkstra extends AbstractRoutingAlgorithm
     protected void initCollections( int size )
     {
         fromHeap = new PriorityQueue<EdgeEntry>(size);
-        fromMap = new TIntObjectHashMap<EdgeEntry>(size);
+        fromMap = new TLongObjectHashMap<EdgeEntry>(size);
     }
 
     public void setFrom(int from){
@@ -119,7 +119,7 @@ public class Dijkstra extends AbstractRoutingAlgorithm
                 if (!accept(iter, currEdge.edge))
                     continue;
 
-                int iterationKey = traversalMode.createTraversalId(iter, false);
+                long iterationKey = traversalMode.createTraversalId(graph,iter, false);
                 double edgeWeight=weighting.calcWeight(iter, false, currEdge.edge);
                 double tmpWeight =  edgeWeight+ currEdge.weight;
                 if (logger.isDebugEnabled()) logger.debug("edgeWeight:"+edgeWeight+" tmpWeight:"+tmpWeight);
