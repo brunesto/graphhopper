@@ -240,7 +240,7 @@ public class Path
         EdgeIteratorState iter = graph.getEdgeProps(edgeId, adjNode);
         double dist = iter.getDistance();
         distance += dist;
-        double timeOnEdge=calcMillis(dist, iter.getFlags(), false);
+        double timeOnEdge=calcMillis(dist, iter.getFlags(), !reverseOrder);
         millis += timeOnEdge;
         addEdge(edgeId);
         
@@ -258,9 +258,14 @@ public class Path
     protected long calcMillis( double distance, long flags, boolean revert )
     {
         if (revert && !encoder.isBool(flags, FlagEncoder.K_BACKWARD)
-                || !revert && !encoder.isBool(flags, FlagEncoder.K_FORWARD))
-            throw new IllegalStateException("Calculating time should not require to read speed from edge in wrong direction. "
-                    + "Reverse:" + revert + ", fwd:" + encoder.isBool(flags, FlagEncoder.K_FORWARD) + ", bwd:" + encoder.isBool(flags, FlagEncoder.K_BACKWARD));
+                || !revert && !encoder.isBool(flags, FlagEncoder.K_FORWARD)) {
+//            throw new IllegalStateException("Calculating time should not require to read speed from edge in wrong direction. "
+//                    + "Reverse:" + revert + ", fwd:" + encoder.isBool(flags, FlagEncoder.K_FORWARD) + ", bwd:" + encoder.isBool(flags, FlagEncoder.K_BACKWARD));
+        logger.error("Calculating time should not require to read speed from edge in wrong direction. "
+                + "Reverse:" + revert + ", fwd:" + encoder.isBool(flags, FlagEncoder.K_FORWARD) + ", bwd:" + encoder.isBool(flags, FlagEncoder.K_BACKWARD));
+        return 100*1000;
+        }
+        
 
         double speed = revert ? encoder.getReverseSpeed(flags) : encoder.getSpeed(flags);
         if (Double.isInfinite(speed) || Double.isNaN(speed))

@@ -828,8 +828,8 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
 
 //                return false;
 //                // changed also the final finish condition for CH         ?????       
-                boolean finished=bestPath.getWeight()<Double.MAX_VALUE;
-//                		currFrom.weight >=  bestPath.getWeight() && currTo.weight >=  bestPath.getWeight();
+                boolean finished=//bestPath.getWeight()<Double.MAX_VALUE;
+                		currFrom.weight >=  bestPath.getWeight() && currTo.weight >=  bestPath.getWeight();
                 if (finished)
                 	logger.debug("finished!");
                 return finished;

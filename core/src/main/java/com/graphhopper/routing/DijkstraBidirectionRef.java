@@ -263,7 +263,7 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
             
 
             if (ee!=null && updateBestPath)
-                updateBestPath(iter, ee, iterationKey);
+                updateBestPath(iter, ee, iterationKey,tmpWeight);
         }
 //        logger.info("evaluation:"+evaluationCnt);
         evaluationCnt++;
@@ -317,11 +317,14 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
 	    
 	    return null;
     }
-
+	 @Override
+    protected void updateBestPath( EdgeIteratorState edgeState, EdgeEntry entryCurrent, long iterationKey){
+		 throw new RuntimeException("dont call me!");
+	 }
     
     
-    @Override
-    protected void updateBestPath( EdgeIteratorState edgeState, EdgeEntry entryCurrent, long iterationKey )
+    
+    protected void updateBestPath( EdgeIteratorState edgeState, EdgeEntry entryCurrent, long iterationKey,double tmpWeight )
     {
     	if (graph.getEdgeProps(entryCurrent.edge, entryCurrent.adjNode)==null){
     		throw new RuntimeException("yaya!"+entryCurrent);
@@ -355,7 +358,7 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
             	
             	// TODO
             	logger.warn("remove weight!");
-//                newWeight -= weighting.calcWeight(edgeState, reverse, EdgeIterator.NO_EDGE);
+                newWeight -= tmpWeight;
 //            		} else 
 //            		{
 //            			entryCurrent=entryCurrent.parent;
